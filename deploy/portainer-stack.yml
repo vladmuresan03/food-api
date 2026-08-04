@@ -22,8 +22,14 @@ services:
     networks:
       - postgresql_foodfinder_net
       - nginx-proxy-manager_default
+    # Bind to loopback only: useful for ad-hoc smoke tests from the host
+    # (`curl http://localhost:9150/actuator/health`) without exposing
+    # the app to anything except the internal Docker networks above.
+    # NPM reaches the container on the same internal 8080 over
+    # nginx-proxy-manager_default. Do NOT change to "9150:8080" without
+    # a firewall rule — that would publish the admin port publicly.
     ports:
-      - "9150:8080"
+      - "127.0.0.1:9150:8080"
     healthcheck:
       test:
         - CMD

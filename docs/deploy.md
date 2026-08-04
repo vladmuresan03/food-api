@@ -15,18 +15,22 @@ docker push registry.treloc.com/foodfinder-api:0.1.0
 
 Adjust the registry and tag to match your setup.
 
-## Host port mapping
+## Host port mapping (loopback only)
 
-The stack publishes the app on host port **9150** mapped to container port **8080**:
+The stack publishes the app on `127.0.0.1:9150` mapped to container port `8080`:
 
 ```yaml
 ports:
-  - "9150:8080"
+  - "127.0.0.1:9150:8080"
 ```
 
-This makes the app reachable directly on `http://<host>:9150` for ad-hoc checks (e.g. `curl http://localhost:9150/actuator/health` while SSH'd into the server). The reverse path through Nginx Proxy Manager at `food.treloc.com:443` reaches the **same** container port `8080` over the `nginx-proxy-manager_default` Docker network, **not** port 9150.
+This makes the app reachable directly on `http://localhost:9150` for ad-hoc checks (e.g. `curl http://localhost:9150/actuator/health` while SSH'd into the server) **without exposing it on the host's public interface**. Anything not on the host itself is blocked by the kernel.
 
-If you change this, also update the NPM proxy host's **Forward Port** to match the new internal port. The stack file is the single source of truth for which port the container listens on.
+The reverse path through Nginx Proxy Manager at `food.treloc.com:443` reaches the same container port `8080` over the `nginx-proxy-manager_default` Docker network, not via the loopback mapping.
+
+**Do not change `127.0.0.1:9150:8080` to `9150:8080`** without a host-level firewall rule. The un-prefixed form binds the admin port on every interface, including the public one — the admin endpoints and `/actuator/*` would be reachable from the internet.
+
+If you change the internal port, also update the NPM proxy host's **Forward Port** to match. The stack file is the single source of truth for which port the container listens on.
 
 ## Portainer stack
 
