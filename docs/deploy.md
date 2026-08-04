@@ -15,6 +15,19 @@ docker push registry.treloc.com/foodfinder-api:0.1.0
 
 Adjust the registry and tag to match your setup.
 
+## Host port mapping
+
+The stack publishes the app on host port **9150** mapped to container port **8080**:
+
+```yaml
+ports:
+  - "9150:8080"
+```
+
+This makes the app reachable directly on `http://<host>:9150` for ad-hoc checks (e.g. `curl http://localhost:9150/actuator/health` while SSH'd into the server). The reverse path through Nginx Proxy Manager at `food.treloc.com:443` reaches the **same** container port `8080` over the `nginx-proxy-manager_default` Docker network, **not** port 9150.
+
+If you change this, also update the NPM proxy host's **Forward Port** to match the new internal port. The stack file is the single source of truth for which port the container listens on.
+
 ## Portainer stack
 
 `deploy/portainer-stack.yml` is the Portainer stack definition.

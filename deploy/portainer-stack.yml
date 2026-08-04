@@ -22,6 +22,8 @@ services:
     networks:
       - postgresql_foodfinder_net
       - nginx-proxy-manager_default
+    ports:
+      - "9150:8080"
     healthcheck:
       test:
         - CMD
