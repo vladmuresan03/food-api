@@ -34,13 +34,24 @@ If you change the internal port, also update the NPM proxy host's **Forward Port
 
 ## Portainer stack
 
-`deploy/portainer-stack.yml` is the Portainer stack definition.
+`deploy/portainer-stack.yml` is the Portainer stack definition. The stack builds the image from the repo's `Dockerfile` (multi-stage Maven + Temurin JRE) on every deploy — no pre-built image is needed.
 
-Required env vars at the stack level:
+### Import the stack
+
+1. Portainer → **Stacks** → **Add stack**.
+2. **Name**: `foodfinder-api`.
+3. **Build method**: leave on the default ("Use the web editor") for the first try. Portainer Standalone has two paths:
+   - **Repository** (recommended): paste `https://github.com/vladmuresan03/food-api.git` and set **Compose path** = `deploy/portainer-stack.yml`. Portainer clones the repo, then `docker build` against the included Dockerfile.
+   - **Web editor**: paste the contents of `deploy/portainer-stack.yml` directly. Same result, but you lose automatic rebuilds on push.
+4. Set the env vars below.
+5. **Deploy the stack**.
+
+The first deploy will take 4–6 minutes (Maven download + build of the JRE image). Subsequent deploys use the cached Maven layers and are faster.
+
+### Required env vars
 
 | Var                                | Example                                                       |
 |------------------------------------|---------------------------------------------------------------|
-| `FOODFINDER_IMAGE`                 | `registry.treloc.com/foodfinder-api:0.1.0`                    |
 | `SPRING_DATASOURCE_URL`            | `jdbc:postgresql://postgresql:5432/foodfinder_spring`         |
 | `SPRING_DATASOURCE_USERNAME`       | `foodfinder`                                                  |
 | `SPRING_DATASOURCE_PASSWORD`       | `…`                                                           |
