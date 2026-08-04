@@ -1,26 +1,18 @@
 # Portainer stack for production deploy.
 #
-# When imported into Portainer via "Stacks > Add stack > Repository",
-# Portainer clones the repository, then runs `docker build` using the
-# compose stack. The build context is the repo root, the Dockerfile is
-# at the root. After the first build, Portainer re-uses the image for
-# subsequent redeploys (and rebuilds when GitOps updates are enabled
-# or a webhook fires).
+# Use this when the image was built out-of-band via bin/build-image.sh on
+# the Portainer host. No build context here — the image is expected to
+# already exist locally as `foodfinder-api:0.1.0` (or whatever IMAGE_TAG
+# you used).
+#
+# In Portainer UI, pick "Web editor" (not Repository) and paste this
+# file's contents. Set the env vars in the Environment section.
 #
 # Networks `postgresql_foodfinder_net` and `nginx-proxy-manager_default`
 # are external (created by other stacks) and are NOT defined here.
-#
-# In the Portainer UI set:
-#   Build method:        default ("docker build" with this compose)
-#   Git repository URL:  https://github.com/vladmuresan03/food-api.git
-#   Compose path:        deploy/portainer-stack.yml
-#   (no additional env file)
 services:
   foodfinder-api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: foodfinder-api:local
+    image: foodfinder-api:${IMAGE_TAG:-0.1.0}
     container_name: foodfinder-api
     restart: unless-stopped
     environment:

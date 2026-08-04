@@ -34,19 +34,50 @@ If you change the internal port, also update the NPM proxy host's **Forward Port
 
 ## Portainer stack
 
-`deploy/portainer-stack.yml` is the Portainer stack definition. The stack builds the image from the repo's `Dockerfile` (multi-stage Maven + Temurin JRE) on every deploy — no pre-built image is needed.
+Portainer Standalone cannot reliably build images from a `build:` context
+(it can clone the repo, but `context: .` resolves against an unspecified
+working directory and you get `no such file or directory: Dockerfile`).
+The supported pattern on Portainer Standalone is **build the image on
+the host, then deploy with `image:` only**.
 
-### Import the stack
+### Step 1 — build the image on the Portainer host
+
+On the same Docker host as Portainer, run:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/vladmuresan03/food-api/main/bin/build-image.sh | bash
+# or, after cloning:
+./bin/build-image.sh
+```
+
+This clones the repo into `/tmp/foodfinder-api-build`, runs `docker build`
+against the included multi-stage Dockerfile, and tags the result as
+`foodfinder-api:0.1.0`. First build takes 4–6 minutes (Maven dependencies
++ JRE base image). Subsequent builds reuse the cache.
+
+### Step 2 — import the stack
+
+`deploy/portainer-stack-image.yml` is the Portainer stack definition.
+It uses `image: foodfinder-api:${IMAGE_TAG:-0.1.0}` and no build context.
 
 1. Portainer → **Stacks** → **Add stack**.
 2. **Name**: `foodfinder-api`.
-3. **Build method**: leave on the default ("Use the web editor") for the first try. Portainer Standalone has two paths:
-   - **Repository** (recommended): paste `https://github.com/vladmuresan03/food-api.git` and set **Compose path** = `deploy/portainer-stack.yml`. Portainer clones the repo, then `docker build` against the included Dockerfile.
-   - **Web editor**: paste the contents of `deploy/portainer-stack.yml` directly. Same result, but you lose automatic rebuilds on push.
-4. Set the env vars below.
+3. **Build method**: **Web editor**. Paste the contents of `deploy/portainer-stack-image.yml`.
+4. Set the env vars below (in the Environment section).
 5. **Deploy the stack**.
 
-The first deploy will take 4–6 minutes (Maven download + build of the JRE image). Subsequent deploys use the cached Maven layers and are faster.
+The first time you do this, the stack starts in seconds because the
+image is already built.
+
+### Step 3 — redeploy after a code change
+
+```bash
+# rebuild with the same IMAGE_TAG to overwrite
+./bin/build-image.sh
+# in Portainer UI: Stacks → foodfinder-api → Editor → "Pull and redeploy"
+# (or just "Redeploy" — Portainer will restart the container with the
+# updated local image).
+```
 
 ### Required env vars
 
@@ -65,6 +96,21 @@ Networks: `postgresql_foodfinder_net` and `nginx-proxy-manager_default` must exi
 Volume: `foodfinder_media` is created automatically and persists uploaded photos and menu PDFs across deploys.
 
 Healthcheck: container-level HTTP probe against `/actuator/health` over `/dev/tcp`. Returns 200 only when the app is ready to serve traffic.
+
+### Alternative: registry push
+
+If you prefer to push the image to a registry instead of building on the
+Portainer host:
+
+```bash
+docker build -t registry.treloc.com/foodfinder-api:0.1.0 .
+docker push registry.treloc.com/foodfinder-api:0.1.0
+```
+
+Then in `deploy/portainer-stack-image.yml`, change the `image:` line to
+the full registry path and ensure Portainer is configured to pull from
+that registry. The default `bin/build-image.sh` flow is simpler and
+avoids registry credentials.
 
 ## Nginx Proxy Manager setup
 
