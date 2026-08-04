@@ -1,0 +1,6 @@
+restaurant_key,name,website_url,address_line,city,latitude,longitude,status
+big-belly-cluj-napoca,Big Belly,,"Calea Mănăștur nr. 68, Cluj-Napoca, RO",Cluj-Napoca,46.761202,23.565204,ACTIVE
+jaxx-cluj-napoca,Jaxx,,"Cluj-Napoca, RO",Cluj-Napoca,46.771309,23.5846,ACTIVE
+roata-cluj-napoca,Roata Făget,,"Cluj-Napoca, RO",Cluj-Napoca,46.77027,23.584053,ACTIVE
+tortelli-cluj-napoca,Tortelli,,"Cluj-Napoca, RO",Cluj-Napoca,46.770825,23.587225,ACTIVE
+my-thai-cluj-napoca,My Thai,,"Cluj-Napoca, RO",Cluj-Napoca,46.768313,23.619238,ACTIVE

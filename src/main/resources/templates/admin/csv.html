@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/_layout :: head('CSV import/export')}"></head>
+<body>
+<header th:replace="~{admin/_layout :: topbar}"></header>
+<nav th:replace="~{admin/_layout :: nav('csv')}"></nav>
+<main>
+    <h2>CSV import / export</h2>
+    <p class="muted">Run imports in dry-run mode to preview row-level errors before writing. Strict mode rolls back all writes if any row is invalid.</p>
+
+    <div th:if="${errorMessage != null}" class="errors">
+        <h3>Import failed</h3>
+        <p th:text="${errorMessage}"></p>
+    </div>
+
+    <div th:if="${report != null and !report.errors().isEmpty()}" class="errors">
+        <h3>
+            <span th:text="${report.dryRun} ? 'Dry-run: ' : 'Import: '"></span>
+            <span th:text="${report.errors().size()} + ' row error(s) found'"></span>
+        </h3>
+        <p>Nothing was written.</p>
+        <table>
+            <thead><tr><th>Row</th><th>Field</th><th>Code</th><th>Message</th></tr></thead>
+            <tbody>
+            <tr th:each="e : ${report.errors()}">
+                <td th:text="${e.row}"></td>
+                <td><code th:text="${e.field}"></code></td>
+                <td><code th:text="${e.code}"></code></td>
+                <td th:text="${e.message}"></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div th:if="${report != null and report.errors().isEmpty()}" class="success">
+        <h3>OK</h3>
+        <p>
+            <span th:if="${report.dryRun}">Dry run: </span>
+            <span th:unless="${report.dryRun}">Import: </span>
+            <span th:text="${report.totalRows} + ' rows scanned, ' + ${report.inserted} + ' inserted, ' + ${report.updated} + ' updated'"></span>
+        </p>
+    </div>
+
+    <table>
+        <thead><tr><th>Resource</th><th>Download</th><th>Upload (with dry-run)</th></tr></thead>
+        <tbody>
+        <tr th:each="r : ${resources}">
+            <td><strong th:text="${r.label}"></strong></td>
+            <td><a th:href="@{'/admin/api/csv/' + ${r.slug}}">CSV</a></td>
+            <td>
+                <form th:action="@{'/admin/csv/' + ${r.slug}}" method="post" enctype="multipart/form-data" class="toolbar">
+                    <input type="file" name="file" accept=".csv" required="required"/>
+                    <label><input type="checkbox" name="dryRun" value="true" checked="checked"/> dry-run</label>
+                    <button type="submit">Upload</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+</body>
+</html>

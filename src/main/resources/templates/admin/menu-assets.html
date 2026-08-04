@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/_layout :: head('Menu assets')}"></head>
+<body>
+<header th:replace="~{admin/_layout :: topbar}"></header>
+<nav th:replace="~{admin/_layout :: nav('menu-assets')}"></nav>
+<main>
+    <h2>Menu assets</h2>
+
+    <h3>Upload a file (PDF, JPEG, PNG, WebP)</h3>
+    <form th:action="@{/admin/api/menus/{menuKey}/assets(menuKey=${menuKey})}" method="post"
+          enctype="multipart/form-data" class="toolbar"
+          style="background:white;border:1px solid var(--border);padding:0.75rem;border-radius:4px;">
+        <input name="menuKey" placeholder="menu_key" required="required"/>
+        <input type="file" name="file" accept="application/pdf,image/jpeg,image/png,image/webp" required="required"/>
+        <button type="submit">Upload</button>
+    </form>
+
+    <h3>Register a URL</h3>
+    <form th:action="@{/admin/api/menus/{menuKey}/assets/url(menuKey=${urlMenuKey})}" method="post"
+          class="toolbar"
+          style="background:white;border:1px solid var(--border);padding:0.75rem;border-radius:4px;">
+        <input name="urlMenuKey" placeholder="menu_key" required="required"/>
+        <input name="sourceUrl" placeholder="https://..." required="required"/>
+        <select name="assetType">
+            <option value="URL">URL</option>
+            <option value="PDF">PDF</option>
+            <option value="IMAGE">IMAGE</option>
+        </select>
+        <input name="originalFilename" placeholder="original filename (optional)"/>
+        <input name="sizeBytes" type="number" placeholder="size_bytes (optional)"/>
+        <input name="sha256" placeholder="sha256 (optional, 64 hex chars)"/>
+        <button type="submit">Register</button>
+    </form>
+
+    <div th:if="${rows.empty}" class="empty"><p><strong>No menu assets yet.</strong></p></div>
+
+    <table th:unless="${rows.empty}">
+        <thead>
+        <tr><th>File / link</th><th>Menu</th><th>Type</th><th>Filename</th><th>MIME</th><th>Size</th><th>SHA-256</th><th>Uploaded at</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="r : ${rows}">
+            <td>
+                <a th:if="${r.contentUrl != null}" th:href="${r.contentUrl}" target="_blank" rel="noopener" th:text="${r.label}">open</a>
+                <a th:unless="${r.contentUrl != null}" th:href="${r.sourceUrl}" target="_blank" rel="noopener" th:text="${r.label}">link</a>
+            </td>
+            <td><code th:text="${r.menuKey}"></code></td>
+            <td th:text="${r.assetType}"></td>
+            <td th:text="${r.originalFilename} ?: '—'"></td>
+            <td th:text="${r.mimeType} ?: '—'"></td>
+            <td th:text="${r.sizeBytes} ?: '—'"></td>
+            <td><code th:text="${r.sha256Short}"></code></td>
+            <td class="muted" th:text="${#temporals.format(r.createdAt, 'yyyy-MM-dd HH:mm')}"></td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+</body>
+</html>

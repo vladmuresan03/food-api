@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: foodfinder-api
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/foodfinder}
+    username: ${SPRING_DATASOURCE_USERNAME:foodfinder}
+    password: ${SPRING_DATASOURCE_PASSWORD:foodfinder}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 60MB
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+server:
+  port: ${PORT:8080}
+
+foodfinder:
+  admin:
+    username: ${FOODFINDER_ADMIN_USERNAME:admin}
+    password: ${FOODFINDER_ADMIN_PASSWORD:admin}
+  storage-dir: ${FOODFINDER_STORAGE_DIR:./data/storage}
+  allowed-origins: ${FOODFINDER_ALLOWED_ORIGINS:}
+
+logging:
+  level:
+    org.hibernate.SQL: warn

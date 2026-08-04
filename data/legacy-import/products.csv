@@ -1,0 +1,48 @@
+product_key,restaurant_key,name,description,weight_text,status
+big-belly-cluj-napoca-meniu-piept-de-pui-crocant-5-buc,big-belly-cluj-napoca,Meniu Piept de Pui Crocant - 5 buc,"Ingrediente: piept de pui crocant (220 g) + cartofi prajiti sau orez cu legume (220 g) + sos la alegere (70 g) + suc sau bere 0,5",500 g,ACTIVE
+big-belly-cluj-napoca-meniu-piept-de-pui-crocant-7-buc,big-belly-cluj-napoca,Meniu Piept de Pui Crocant - 7 buc,"Ingrediente: piept de pui crocant (320 g) + cartofi prajiti sau orez cu legume (220 g) + sos la alegere (70 g) + suc sau bere 0,5",600 g,ACTIVE
+big-belly-cluj-napoca-meniu-cascaval,big-belly-cluj-napoca,Meniu Cașcaval,"Ingrediente: 3 buc. cascaval pane (210 g) + salata asortata de varza, rosii, castraveti (250 g) + cartofi prajiti sau orez cu legume (200 g) + sos la alegere (70 g) + bautura la alegere (0.5 litri)",700 g,ACTIVE
+big-belly-cluj-napoca-meniu-mixt-cascaval,big-belly-cluj-napoca,Meniu Mixt Cașcaval,"Ingrediente: 2 buc. cascaval pane (140 g) + 4 buc. piept pui crocant (200 g) + 1x porție cartofi prajiti sau orez cu legume (220 g) + 1x sos la alegere (70 g) + 1x bautura la alegere 0,5 (suc sau bere)",600 g,ACTIVE
+big-belly-cluj-napoca-meniu-mixt,big-belly-cluj-napoca,Meniu Mixt,"Ingrediente: 3 buc. piept pui crocant (130 gr) + 1 buc. pulpă de pui dezosată, crocanta (~100 gr) + 3 buc. aripi pui crocante (~100 gr) + 1x portie cartofi prajiti sau orez cu legume (220 gr) + 1x sos la alegere (70 gr) + 1x suc sau bere la alegere (0.5 litri)",600 g,ACTIVE
+big-belly-cluj-napoca-meniu-gratar,big-belly-cluj-napoca,Meniu Grătar,Ingrediente: 1 buc. ceafă de porc la grătar + 2 buc. piept pui la grătar + 1x porție cartofi naturali prajiti sau orez cu legume + 1x salată asortată de varză + 1x sos la alegere (70 gr) + 1x suc sau bere (0.5l),790 g,ACTIVE
+big-belly-cluj-napoca-meniu-pulpe-de-pui-dezosate-crocante,big-belly-cluj-napoca,"Meniu Pulpe de Pui Dezosate, Crocante",Ingrediente: 3 buc. pulpe de pui crocante (~300 gr) + cartofi prajiti sau orez cu legume + sos la alegere (70 gr) + suc sau bere (0.5 litri),600 g,ACTIVE
+big-belly-cluj-napoca-meniu-aripioare-crocante,big-belly-cluj-napoca,Meniu Aripioare Crocante,Ingrediente: 6 buc. aripi pui (~230 gr) + cartofi prajiti sau orez cu legume (220 gr) + sos la alegere (70 gr) + suc sau bere la alegere (0.5 litri),500 g,ACTIVE
+big-belly-cluj-napoca-meniu-turkey-sandwich,big-belly-cluj-napoca,Meniu Turkey Sandwich,"Ingrediente: Chiflă, castraveti murati, mixt salata, piept de curcan gătit la sous-vide, ceapă crocantă, maioneză sriracha + cartofi prajiti cu parmezan si usturoi (~220 gr) + sos (70 gr)",650 g,ACTIVE
+big-belly-cluj-napoca-bbq-ribs-pack,big-belly-cluj-napoca,BBQ Ribs Pack,"Ingrediente: Costiță de porc caramelizata in sos BBQ - gatită dupa reteta proprie (430 g) + cartofi fierti, trasi la tigaie cu ceapă verde (250 g) + Un mix de salata proaspata, condimentată",760 g,ACTIVE
+big-belly-cluj-napoca-meniu-vegetarian,big-belly-cluj-napoca,Meniu Vegetarian,"Ingrediente: chiftele vegetale 2 buc (170 gr) + cartofi prajiti (200 gr) + salata asortata de varza, rosii si castraveti",650 g,ACTIVE
+big-belly-cluj-napoca-meniul-vegetarian,big-belly-cluj-napoca,Meniul Vegetarian,"reprezintă combinația ideală de prospețime și aromă. Chiftelele vegetale, preparate din ingrediente atent selecționate, se îmbină perfect cu cartofii prăjiți și salata asortată, plină de legume proaspete. Alege această opțiune pentru o masă echilibrată, sănătoasă și sățioasă. Comandă acum",,ACTIVE
+big-belly-cluj-napoca-meniu-pulpe-grill-si-legume-la-tigaie,big-belly-cluj-napoca,Meniu Pulpe Grill si Legume la Tigaie,"Ingrediente: legume trase la tigaie (~300 gr) + 3 bucăți de pulpe de pui gatite la grill (~210 gr) Meniul Pulpe Pui Grill este alegerea perfectă atunci când îți dorești o masă gustoasă și echilibrată. Pulpele de pui sunt gătite la grill pentru a-și păstra frăgezimea și savoarea, iar legumele trase la tigaie completează preparatul cu un plus de prospețime și aromă. Fie că îl alegi pentru prânz sau pentru cină, acest meniu îți oferă combinația ideală dintre carne suculentă și garnitură de legume. Comandă acum de la Big Belly și bucură-te de un preparat pregătit cu grijă, livrat direct la tine",510 gr,ACTIVE
+jaxx-cluj-napoca-pork-padron-pepper,jaxx-cluj-napoca,Pork & Padrón Pepper,Pork tenderloin on Rustic Bread with Padrón peppers and mayonnaise,150 g,ACTIVE
+jaxx-cluj-napoca-garlic-gambas,jaxx-cluj-napoca,Garlic Gambas,Shrimps sautéed in DOP olive oil with garlic and a hint of chili — served sizzling. 🌶️ Ușor picant,150 g,ACTIVE
+jaxx-cluj-napoca-spanish-tortilla,jaxx-cluj-napoca,Spanish Tortilla,"Classic Spanish omelette with potatoes and onions, cooked in olive oil — creamy in the center",150 g,ACTIVE
+jaxx-cluj-napoca-patatas-bravas,jaxx-cluj-napoca,Patatas Bravas,Crispy potatoes with homemade brava sauce and smoked Pimentón de la Vera DOP,150 g,ACTIVE
+jaxx-cluj-napoca-chilled-salmorejo-jamon,jaxx-cluj-napoca,Chilled Salmorejo & Jamón,"Traditional Andalusian chilled tomato soup made with bread, extra virgin olive oil, topped with egg and jamón",150 g,ACTIVE
+roata-cluj-napoca-omleta-cu-cascaval,roata-cluj-napoca,Omletă cu cașcaval *,"Două ouă, cașcaval, legume proaspete",,ACTIVE
+roata-cluj-napoca-omleta-cu-sunca,roata-cluj-napoca,Omletă cu șuncă *,"Două ouă, șuncă, legume proaspete",,ACTIVE
+roata-cluj-napoca-ciorba-de-burta,roata-cluj-napoca,Ciorbă de burtă,Pacalleves Tripe soup,300/100 gr,ACTIVE
+roata-cluj-napoca-ciorba-de-varza-acra-cu-afumatura,roata-cluj-napoca,Ciorbă de varză acră cu afumătură,Savanyúkáposzta-leves füstölt hússal Sour cabbage soup with smoked meat,400 gr,ACTIVE
+roata-cluj-napoca-salata-cu-piept-de-pui,roata-cluj-napoca,Salată cu piept de pui *,"Salată, piept de pui la grătar, roșii, castraveți, ceapă roșie, dressing, crutoane",350 gr,ACTIVE
+roata-cluj-napoca-salata-greceasca,roata-cluj-napoca,Salată grecească *,"Salată, brânză feta, roșii, castraveți, măsline, ceapă roșie",350 gr,ACTIVE
+roata-cluj-napoca-salata-de-vinete,roata-cluj-napoca,Salată de vinete *,Padlizsánkrém Eggplant salad,200 gr,ACTIVE
+roata-cluj-napoca-platou-taranesc-roata,roata-cluj-napoca,Platou Țărănesc Roata *,"Cârnați, slănină, tobă, jumări, mușchi tradițional, telemea, brânză, burduf, roșii, ceapă)",900 gr,ACTIVE
+roata-cluj-napoca-cas-pane,roata-cluj-napoca,Caș pane *,Rántott sajt Breaded cheese,200 gr,ACTIVE
+roata-cluj-napoca-camembert-la-gratar,roata-cluj-napoca,Camembert la grătar *,Grillezett Camembert Grilled Camembert Cu sos de a ne Áfonya szósszal With blueberry sauce,120/40 gr,ACTIVE
+roata-cluj-napoca-platou-mix-grill-faget,roata-cluj-napoca,Platou mix-grill Făget *,"Costițe de porc 250g, cotlet de porc 200 g, mititei 200 g, piept de pui 200 g, ciolan 200 g, cordon bleu 200 g, carto aurii 700 g, murături 250 g, muștar 50 g, sos aioli 50 g, ketchup 50 g",2150 g,ACTIVE
+roata-cluj-napoca-platou-mix-grill-roata,roata-cluj-napoca,Platou mix-grill Roata *,"Costițe de porc 250g, ceafă de porc 200 g, mititei 200 g, pulpe de pui 200 g, cârnați 200 g, cordon bleu 200 g, carto prăjiți 700 g, murături 250 g, muștar 50 g, sos aioli 50 g, ketchup 50 g",2150 g,ACTIVE
+roata-cluj-napoca-bianco,roata-cluj-napoca,Bianco,"Aluat, sos alb, mozzarella, șuncă, ciuperci, porumb",450 gr,ACTIVE
+roata-cluj-napoca-roata-faget,roata-cluj-napoca,Roata Făget,"Aluat, sos de roșii, mozzarella, prosciutto cotto, bacon, salam, cârnați de casă, fasole, roșii, ceapă roșie, măsline, ardei",600 gr,ACTIVE
+roata-cluj-napoca-papanasi,roata-cluj-napoca,Papanași *,Fresh cottage cheese donuts with blueberry jam and sour cream,300g,ACTIVE
+roata-cluj-napoca-papanasi-cu-ciocolata,roata-cluj-napoca,Papanași cu ciocolată *,Fresh cottage cheese donuts with chocolate,150 g,ACTIVE
+roata-cluj-napoca-penne-cu-pui-si-hribi,roata-cluj-napoca,Penne cu pui și hribi *,"Paste, pui, hribi, smântână dulce, parmezan Tészta, csirke, vargánya, tejszín, parmezán sajt Pasta, chicken, penny bun, sweet cream, parmesan",400gr,ACTIVE
+roata-cluj-napoca-penne-carbonara,roata-cluj-napoca,Penne Carbonara *,"Paste, bacon, smântână dulce, ou, parmezan Tészta, bacon, tejszín, tojás, parmezán sajt Pasta, bacon, sweet cream, egg, parmesan",400gr,ACTIVE
+roata-cluj-napoca-ciolan-intreg-la-cuptor,roata-cluj-napoca,Ciolan întreg la cuptor *,Kemencés füstölt csülök Oven-baked pork knuckle,200 g,ACTIVE
+roata-cluj-napoca-ciolan-afumat-la-gratar,roata-cluj-napoca,Ciolan afumat la grătar*,Grillezett Füstölt csülök Grilled Smoked pork knuckle,,ACTIVE
+roata-cluj-napoca-ceafa-tiganeasca,roata-cluj-napoca,Ceafă țigănească*,"Ceafă de porc, slănină prăjită, ceapă prăjită, carto aurii",400g,ACTIVE
+roata-cluj-napoca-costite-de-porc-cu-sos-barbeque,roata-cluj-napoca,Costițe de porc cu sos barbeque *,Costițe de porc cu sos barbeque *,350g,ACTIVE
+roata-cluj-napoca-crispy-chicken-cu-sos-aioli,roata-cluj-napoca,Crispy chicken cu sos aioli,Ropogós csirkemell aiolival Crispy chicken served with aioli,200/50g,ACTIVE
+roata-cluj-napoca-piept-de-pui-mexican,roata-cluj-napoca,Piept de pui mexican,"Mexikói csirkemell Mexican chicken breasts Ceapă, ardei, baby corn, roșii, chili Hagyma, paprika, bébikukorica, paradicsom, csili Onion, peppers, baby corn, tomatoes, chili",200 g,ACTIVE
+roata-cluj-napoca-cartos-prajiti,roata-cluj-napoca,Cartoș prăjiți,,200 g,ACTIVE
+roata-cluj-napoca-orez-cu-legume,roata-cluj-napoca,Orez cu legume,,200 g,ACTIVE
+roata-cluj-napoca-costite-de-porc,roata-cluj-napoca,Costite de porc,,350 g,ACTIVE
+roata-cluj-napoca-brisket-de-vita,roata-cluj-napoca,Brisket de vită,,,ACTIVE
+roata-cluj-napoca-rustica,roata-cluj-napoca,Rustica,"Pizzatészta, paradicsomszósz, mozzarella, hagyma, paradicsom, burduf túró Pizza dough, tomato sauce, mozzarella, onion, tomato, cheese",550 gr,ACTIVE

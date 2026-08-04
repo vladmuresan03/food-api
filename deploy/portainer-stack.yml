@@ -1,0 +1,47 @@
+# Portainer stack for production deploy.
+# Pinned to a pre-built image; rebuild and re-push to update.
+# Networks `postgresql_foodfinder_net` and `nginx-proxy-manager_default` are
+# external (created by other stacks) — they are NOT defined here.
+services:
+  foodfinder-api:
+    image: ${FOODFINDER_IMAGE}
+    container_name: foodfinder-api
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      FOODFINDER_ADMIN_USERNAME: ${FOODFINDER_ADMIN_USERNAME}
+      FOODFINDER_ADMIN_PASSWORD: ${FOODFINDER_ADMIN_PASSWORD}
+      FOODFINDER_STORAGE_DIR: ${FOODFINDER_STORAGE_DIR:-/data/foodfinder}
+      FOODFINDER_ALLOWED_ORIGINS: ${FOODFINDER_ALLOWED_ORIGINS}
+      JAVA_OPTS: "-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError"
+      PORT: "8080"
+    volumes:
+      - foodfinder_media:/data/foodfinder
+    networks:
+      - postgresql_foodfinder_net
+      - nginx-proxy-manager_default
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -lc
+        - 'exec 3<>/dev/tcp/127.0.0.1/${PORT}; printf "GET /actuator/health HTTP/1.0\r\nHost: localhost\r\n\r\n" >&3; grep -q 200 <&3 || exit 1'
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  foodfinder_media:
+
+networks:
+  postgresql_foodfinder_net:
+    external: true
+    name: postgresql_foodfinder_net
+  nginx-proxy-manager_default:
+    external: true
+    name: nginx-proxy-manager_default

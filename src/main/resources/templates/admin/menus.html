@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/_layout :: head('Menus')}"></head>
+<body>
+<header th:replace="~{admin/_layout :: topbar}"></header>
+<nav th:replace="~{admin/_layout :: nav('menus')}"></nav>
+<main>
+    <h2>Menus</h2>
+    <div class="toolbar">
+        <form method="get" th:action="@{/admin/menus}">
+            <input name="q" th:value="${q}" placeholder="search key or name"/>
+            <input name="restaurantKey" th:value="${restaurantKey}" placeholder="restaurant_key"/>
+            <select name="status">
+                <option value="">all</option>
+                <option value="DRAFT" th:selected="${status == 'DRAFT'}">DRAFT</option>
+                <option value="PUBLISHED" th:selected="${status == 'PUBLISHED'}">PUBLISHED</option>
+                <option value="ARCHIVED" th:selected="${status == 'ARCHIVED'}">ARCHIVED</option>
+            </select>
+            <button type="submit">Filter</button>
+        </form>
+        <a class="secondary" th:href="@{/admin/api/csv/menus}" style="margin-left:auto;">Download CSV</a>
+    </div>
+
+    <div th:if="${rows.empty}" class="empty"><p><strong>No menus yet.</strong></p></div>
+
+    <table th:unless="${rows.empty}">
+        <thead>
+        <tr><th>Menu</th><th>Restaurant</th><th>Type</th><th>Status</th><th>Items</th><th>Assets</th><th>Source</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="row : ${rows}">
+            <td><strong th:text="${row.menu.name}"></strong><br/><code class="muted" th:text="${row.menu.menuKey}"></code></td>
+            <td th:text="${row.restaurantKey}"></td>
+            <td th:text="${row.menu.menuType}"></td>
+            <td><span class="pill" th:classappend="'pill-' + ${#strings.toLowerCase(row.menu.status)}" th:text="${row.menu.status}"></span></td>
+            <td th:text="${row.itemCount}"></td>
+            <td th:text="${row.assetCount}"></td>
+            <td>
+                <a th:if="${row.menu.sourceUrl != null}" th:href="${row.menu.sourceUrl}" target="_blank" rel="noopener">link</a>
+                <span th:unless="${row.menu.sourceUrl != null}" class="muted">—</span>
+            </td>
+            <td class="actions"><a th:href="@{'/admin/menus/' + ${row.menu.menuKey}}">View</a></td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+</body>
+</html>

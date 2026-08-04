@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/_layout :: head('Menu items')}"></head>
+<body>
+<header th:replace="~{admin/_layout :: topbar}"></header>
+<nav th:replace="~{admin/_layout :: nav('menu-items')}"></nav>
+<main>
+    <h2>Menu items</h2>
+    <div class="toolbar">
+        <form method="get" th:action="@{/admin/menu-items}">
+            <input name="menuKey" th:value="${menuKey}" placeholder="menu_key"/>
+            <input name="productKey" th:value="${productKey}" placeholder="product_key"/>
+            <input name="section" th:value="${section}" placeholder="section"/>
+            <button type="submit">Filter</button>
+        </form>
+        <a class="secondary" th:href="@{/admin/api/csv/menu-items}" style="margin-left:auto;">Download CSV</a>
+    </div>
+
+    <div th:if="${rows.empty}" class="empty"><p><strong>No menu items yet.</strong></p></div>
+
+    <table th:unless="${rows.empty}">
+        <thead>
+        <tr><th>Thumbnail</th><th>Product</th><th>Restaurant</th><th>Menu</th><th>Section</th><th>Price</th><th>Weight</th><th>Available</th><th>Updated</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="r : ${rows}">
+            <td>
+                <img th:if="${r.thumbnailUrl != null}" th:src="${r.thumbnailUrl}" class="thumb" alt=""/>
+                <span th:unless="${r.thumbnailUrl != null}" class="muted">—</span>
+            </td>
+            <td><strong th:text="${r.productName}"></strong><br/><code class="muted" th:text="${r.productKey}"></code></td>
+            <td th:text="${r.restaurantKey}"></td>
+            <td><code th:text="${r.menuKey}"></code></td>
+            <td th:text="${r.sectionName}"></td>
+            <td><span th:text="${r.price} ?: '—'"></span> <span class="muted" th:text="${r.currency}"></span></td>
+            <td th:text="${r.weight} ?: '—'"></td>
+            <td><span th:text="${r.available} ? 'yes' : 'no'"></span></td>
+            <td class="muted" th:text="${#temporals.format(r.updatedAt, 'yyyy-MM-dd HH:mm')}"></td>
+            <td class="actions">
+                <form th:action="@{'/admin/api/menu-items/' + ${r.id}}" method="post" style="display:inline">
+                    <input type="hidden" name="_method" value="delete"/>
+                    <button type="submit" style="background:transparent;border:0;color:#dc2626;cursor:pointer;font-size:0.85rem;padding:0;"
+                            onclick="return confirm('Delete this menu item?')">Delete</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+</body>
+</html>

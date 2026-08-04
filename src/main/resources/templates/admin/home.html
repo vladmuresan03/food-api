@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{admin/_layout :: head('Overview')}"></head>
+<body>
+<header th:replace="~{admin/_layout :: topbar}"></header>
+<nav th:replace="~{admin/_layout :: nav('home')}"></nav>
+<main>
+    <h2>Overview</h2>
+    <div class="empty">
+        <p>Welcome to the FoodFinder catalog admin.</p>
+        <p>Pick a resource from the navigation bar, or go to <a th:href="@{/admin/csv}">CSV import/export</a> to seed the catalog from files.</p>
+    </div>
+</main>
+</body>
+</html>

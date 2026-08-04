@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/_layout :: head('Photos')}"></head>
+<body>
+<header th:replace="~{admin/_layout :: topbar}"></header>
+<nav th:replace="~{admin/_layout :: nav('photos')}"></nav>
+<main>
+    <h2>Photos</h2>
+    <div class="toolbar">
+        <form method="get" th:action="@{/admin/photos}">
+            <input name="restaurantKey" th:value="${restaurantKey}" placeholder="restaurant_key"/>
+            <input name="productKey" th:value="${productKey}" placeholder="product_key"/>
+            <select name="status">
+                <option value="">all</option>
+                <option value="ACTIVE" th:selected="${status == 'ACTIVE'}">ACTIVE</option>
+                <option value="ARCHIVED" th:selected="${status == 'ARCHIVED'}">ARCHIVED</option>
+            </select>
+            <button type="submit">Filter</button>
+        </form>
+        <a class="secondary" th:href="@{/admin/api/csv/photos}" style="margin-left:auto;">Download CSV</a>
+    </div>
+
+    <h3>Upload</h3>
+    <form th:action="@{/admin/api/photos}" method="post" enctype="multipart/form-data"
+          class="toolbar" style="background:white;border:1px solid var(--border);padding:0.75rem;border-radius:4px;">
+        <input type="file" name="file" accept="image/jpeg,image/png" required="required"/>
+        <input name="restaurantKey" placeholder="restaurant_key" required="required"/>
+        <input name="productKey" placeholder="product_key (optional)"/>
+        <input name="altText" placeholder="alt text (optional)"/>
+        <label><input type="checkbox" name="isPrimary" value="true" checked="checked"/> primary</label>
+        <button type="submit">Upload</button>
+    </form>
+
+    <div th:if="${rows.empty}" class="empty"><p><strong>No photos yet.</strong></p></div>
+
+    <table th:unless="${rows.empty}">
+        <thead>
+        <tr><th>Thumbnail</th><th>Photo key</th><th>Restaurant</th><th>Product</th><th>Source</th><th>Primary</th><th>Status</th><th>Open</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="p : ${rows}">
+            <td>
+                <img th:if="${p.thumbnailUrl != null}" th:src="${p.thumbnailUrl}" class="thumb" alt=""/>
+                <span th:unless="${p.thumbnailUrl != null}" class="muted">—</span>
+            </td>
+            <td><code th:text="${p.photoKey}"></code></td>
+            <td th:text="${p.restaurantKey}"></td>
+            <td><code th:text="${p.productKey} ?: '—'"></code></td>
+            <td th:text="${p.sourceType}"></td>
+            <td th:text="${p.primary} ? '★' : ''"></td>
+            <td><span class="pill" th:classappend="'pill-' + ${#strings.toLowerCase(p.status)}" th:text="${p.status}"></span></td>
+            <td>
+                <a th:if="${p.contentUrl != null}" th:href="${p.contentUrl}" target="_blank" rel="noopener">original</a>
+                <span th:unless="${p.contentUrl != null}" class="muted">—</span>
+            </td>
+            <td class="actions">
+                <form th:action="@{'/admin/api/photos/' + ${p.photoKey}}" method="post" style="display:inline">
+                    <input type="hidden" name="_method" value="delete"/>
+                    <button type="submit" style="background:transparent;border:0;color:#dc2626;cursor:pointer;font-size:0.85rem;padding:0;"
+                            onclick="return confirm('Archive this photo?')">Archive</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/_layout :: head('Products')}"></head>
+<body>
+<header th:replace="~{admin/_layout :: topbar}"></header>
+<nav th:replace="~{admin/_layout :: nav('products')}"></nav>
+<main>
+    <h2>Products</h2>
+    <div class="toolbar">
+        <form method="get" th:action="@{/admin/products}">
+            <input name="q" th:value="${q}" placeholder="search name or key"/>
+            <input name="restaurantKey" th:value="${restaurantKey}" placeholder="restaurant_key"/>
+            <select name="status">
+                <option value="">all</option>
+                <option value="DRAFT" th:selected="${status == 'DRAFT'}">DRAFT</option>
+                <option value="ACTIVE" th:selected="${status == 'ACTIVE'}">ACTIVE</option>
+                <option value="ARCHIVED" th:selected="${status == 'ARCHIVED'}">ARCHIVED</option>
+            </select>
+            <button type="submit">Filter</button>
+        </form>
+        <a class="secondary" th:href="@{/admin/api/csv/products}" style="margin-left:auto;">Download CSV</a>
+    </div>
+
+    <div th:if="${rows.empty}" class="empty"><p><strong>No products yet.</strong></p></div>
+
+    <table th:unless="${rows.empty}">
+        <thead>
+        <tr><th>Thumbnail</th><th>Product</th><th>Restaurant</th><th>Weight</th><th>Status</th><th>Updated</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="p : ${rows}">
+            <td>
+                <img th:if="${p.thumbnailUrl != null}" th:src="${p.thumbnailUrl}" class="thumb" alt=""/>
+                <span th:unless="${p.thumbnailUrl != null}" class="muted">—</span>
+            </td>
+            <td><strong th:text="${p.name}"></strong><br/><code class="muted" th:text="${p.productKey}"></code></td>
+            <td th:text="${p.restaurantKey}"></td>
+            <td th:text="${p.weightText} ?: '—'"></td>
+            <td><span class="pill" th:classappend="'pill-' + ${#strings.toLowerCase(p.status)}" th:text="${p.status}"></span></td>
+            <td class="muted" th:text="${#temporals.format(p.updatedAt, 'yyyy-MM-dd HH:mm')}"></td>
+            <td class="actions"><a th:href="@{'/admin/products/' + ${p.productKey}}">View</a></td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+</body>
+</html>
