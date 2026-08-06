@@ -200,6 +200,37 @@ class AdminApiTest {
     }
 
     @Test
+    void updateMenuItemWithCrossRestaurantProductIs409() throws Exception {
+        // Create a menu_item under adm-m1/adm-p1, then try to update it
+        // to point at adm-p2 (which belongs to a different restaurant).
+        // The DB's composite FK would surface this as a 500 if the
+        // controller didn't validate first.
+        String body = mvc.perform(post("/admin/api/menu-items")
+                        .with(httpBasic("test-admin", "test-password"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"menuKey":"adm-m1","productKey":"adm-p1","sectionName":"X","price":10,"currency":"RON"}
+                                """))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String id = body.replaceAll(".*\"id\":(\\d+).*", "$1");
+
+        mvc.perform(put("/admin/api/menu-items/" + id)
+                        .with(httpBasic("test-admin", "test-password"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "menuKey": "adm-m1",
+                                  "productKey": "adm-p2",
+                                  "sectionName": "X",
+                                  "price": 10,
+                                  "currency": "RON"
+                                }
+                                """))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
     void deleteMenuItem() throws Exception {
         // create first
         String body = mvc.perform(post("/admin/api/menu-items")

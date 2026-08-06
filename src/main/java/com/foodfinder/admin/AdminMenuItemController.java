@@ -71,8 +71,15 @@ public class AdminMenuItemController {
         Long productId = products.findByProductKey(body.productKey())
                 .orElseThrow(() -> new NoSuchElementException("Unknown product_key: " + body.productKey())).getId();
         Long menuRestaurantId = menus.findById(menuId).orElseThrow().getRestaurantId();
+        Long productRestaurantId = products.findById(productId).orElseThrow().getRestaurantId();
         if (!menuRestaurantId.equals(mi.getRestaurantId())) {
             throw new AdminConflictException("menu_key belongs to a different restaurant than the existing link");
+        }
+        if (!menuRestaurantId.equals(productRestaurantId)) {
+            // DB enforces this via fk_menu_item_product, but that surfaces
+            // as a 500. Surface it as a 4xx so the admin UI can show it.
+            throw new AdminConflictException(
+                    "menu_key and product_key belong to different restaurants");
         }
         apply(mi, body, menuId, productId, menuRestaurantId);
         items.save(mi);
