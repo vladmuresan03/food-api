@@ -31,19 +31,24 @@ services:
       - postgresql_foodfinder_net
       - nginx-proxy-manager_default
     # Bind to loopback only: useful for ad-hoc smoke tests from the host
-    # (`curl http://localhost:9150/actuator/health`) without exposing
+    # (`curl http://localhost:9152/actuator/health`) without exposing
     # the app to anything except the internal Docker networks above.
     # NPM reaches the container on the same internal 8080 over
-    # nginx-proxy-manager_default. Do NOT change to "9150:8080" without
-    # a firewall rule — that would publish the admin port publicly.
+    # nginx-proxy-manager_default. Do NOT change to "9152:8080" without
+    # a firewall rule — that would publish the app port publicly.
+    # (9150/9151 are already taken by other stacks on the host.)
     ports:
-      - "127.0.0.1:9150:8080"
+      - "127.0.0.1:9152:8080"
     healthcheck:
       test:
         - CMD
         - bash
         - -lc
-        - 'exec 3<>/dev/tcp/127.0.0.1/${PORT}; printf "GET /actuator/health HTTP/1.0\r\nHost: localhost\r\n\r\n" >&3; grep -q 200 <&3 || exit 1'
+        # NOTE: $$ escapes the dollar for docker-compose interpolation so
+        # ${PORT} is expanded at runtime inside the container (PORT is not
+        # a stack env var; a bare ${PORT} interpolates to an empty string
+        # and the healthcheck connects to /dev/tcp/127.0.0.1/ and fails).
+        - 'exec 3<>/dev/tcp/127.0.0.1/$${PORT}; printf "GET /actuator/health HTTP/1.0\r\nHost: localhost\r\n\r\n" >&3; grep -q 200 <&3 || exit 1'
       interval: 30s
       timeout: 10s
       retries: 3

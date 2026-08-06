@@ -6,18 +6,18 @@
 #   bin/op-secret.sh get ITEM FIELD   print one secret, e.g. get portainer password
 #   bin/op-secret.sh env              emit `export ...` lines for deploy scripts
 #
-# Expected 1Password layout (vault overridable via OP_VAULT, default "infra"):
+# Expected 1Password layout (vault overridable via OP_VAULT, default "treloc"):
 #
-#   infra/portainer      -> url, username, password
-#   infra/npm            -> url, username, password        (Nginx Proxy Manager)
-#   infra/foodfinder-env -> SPRING_DATASOURCE_URL, SPRING_DATASOURCE_USERNAME,
+#   treloc/portainer      -> url, username, password
+#   treloc/npm            -> url, username, password        (Nginx Proxy Manager)
+#   treloc/foodfinder-env -> SPRING_DATASOURCE_URL, SPRING_DATASOURCE_USERNAME,
 #                           SPRING_DATASOURCE_PASSWORD, FOODFINDER_ADMIN_USERNAME,
 #                           FOODFINDER_ADMIN_PASSWORD, FOODFINDER_ALLOWED_ORIGINS
 #
 # Never prints more than one secret at a time; `check` prints none at all.
 set -euo pipefail
 
-VAULT="${OP_VAULT:-infra}"
+VAULT="${OP_VAULT:-treloc}"
 KEYCHAIN_SERVICE="foodfinder-op"
 KEYCHAIN_ACCOUNT="service-token"
 

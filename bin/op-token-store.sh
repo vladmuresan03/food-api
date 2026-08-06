@@ -3,11 +3,18 @@
 # Keychain so deploy scripts can use it without any plaintext secret on disk.
 #
 #   1. Create the service account: https://my.1password.com -> Developer ->
-#      Service Accounts -> New. Grant it VIEW access to the "infra" vault.
+#      Service Accounts -> New. Grant it VIEW access to the "treloc" vault.
 #   2. Run this script and paste the ops-... token when prompted.
 #
 # The token never touches the repo, chat, or any file — only the Keychain.
+# Takes no arguments; verification lives in bin/op-secret.sh check.
 set -euo pipefail
+
+if [ $# -ne 0 ]; then
+    echo "ERROR: this script takes no arguments." >&2
+    echo "Did you mean: bin/op-secret.sh check" >&2
+    exit 2
+fi
 
 KEYCHAIN_SERVICE="foodfinder-op"
 KEYCHAIN_ACCOUNT="service-token"

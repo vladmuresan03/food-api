@@ -17,18 +17,18 @@ Adjust the registry and tag to match your setup.
 
 ## Host port mapping (loopback only)
 
-The stack publishes the app on `127.0.0.1:9150` mapped to container port `8080`:
+The stack publishes the app on `127.0.0.1:9152` mapped to container port `8080`:
 
 ```yaml
 ports:
-  - "127.0.0.1:9150:8080"
+  - "127.0.0.1:9152:8080"
 ```
 
-This makes the app reachable directly on `http://localhost:9150` for ad-hoc checks (e.g. `curl http://localhost:9150/actuator/health` while SSH'd into the server) **without exposing it on the host's public interface**. Anything not on the host itself is blocked by the kernel.
+This makes the app reachable directly on `http://localhost:9152` for ad-hoc checks (e.g. `curl http://localhost:9152/actuator/health` while SSH'd into the server) **without exposing it on the host's public interface**. Anything not on the host itself is blocked by the kernel.
 
 The reverse path through Nginx Proxy Manager at `food.treloc.com:443` reaches the same container port `8080` over the `nginx-proxy-manager_default` Docker network, not via the loopback mapping.
 
-**Do not change `127.0.0.1:9150:8080` to `9150:8080`** without a host-level firewall rule. The un-prefixed form binds the admin port on every interface, including the public one — the admin endpoints and `/actuator/*` would be reachable from the internet.
+**Do not change `127.0.0.1:9152:8080` to `9152:8080`** without a host-level firewall rule. The un-prefixed form binds the admin port on every interface, including the public one — the admin endpoints and `/actuator/*` would be reachable from the internet.
 
 If you change the internal port, also update the NPM proxy host's **Forward Port** to match. The stack file is the single source of truth for which port the container listens on.
 
@@ -145,17 +145,18 @@ plaintext secrets on disk, in the repo, or in chat.
 
 ### One-time setup
 
-1. In 1Password, create a vault named `infra`.
-2. Create these items in it:
-   - **`portainer`** (Login): `username`, `password`, website = Portainer URL.
-   - **`npm`** (Login): `username`, `password`, website = `https://proxy.treloc.com`.
-   - **`foodfinder-env`** (Login, or Secure Note with labeled fields): custom
-     fields named exactly like the stack env vars — `SPRING_DATASOURCE_URL`,
-     `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`,
-     `FOODFINDER_ADMIN_USERNAME`, `FOODFINDER_ADMIN_PASSWORD`,
-     `FOODFINDER_ALLOWED_ORIGINS`.
+1. The service account needs access to the vault holding deploy credentials.
+   On this setup that is the **`treloc`** vault (override with `OP_VAULT`).
+2. Items expected by `bin/op-secret.sh` (rename existing items to match):
+   - **`portainer`** (Login): `username`, `password`, website = Portainer URL
+     (currently the Login item with username `treloc`).
+   - **`npm`** (Login): `username`, `password`, website = `https://proxy.treloc.com`
+     (currently the Login item with username `murionutz@gmail.com`).
+   - **`foodfinder-env`** (optional): the production values live in the
+     Portainer stack's Env (stack `foodfinder-api`), which is the source of
+     truth; this item is only needed if you want them in 1Password too.
 3. 1Password web → **Developer → Service Accounts → New**. Grant it
-   **View** access to the `infra` vault only. Copy the `ops-...` token.
+   **View** access to the `treloc` vault only. Copy the `ops-...` token.
 4. On this machine: `bin/op-token-store.sh` — paste the token when prompted.
    It is validated against 1Password and stored in the macOS Keychain
    (`foodfinder-op/service-token`), never in a file.

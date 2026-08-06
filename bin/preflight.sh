@@ -4,7 +4,7 @@
 # host port is free and the external networks are reachable.
 set -euo pipefail
 
-HOST_PORT="${HOST_PORT:-9150}"
+HOST_PORT="${HOST_PORT:-9152}"
 
 echo "== port $HOST_PORT (TCP, host) =="
 if command -v ss >/dev/null 2>&1; then
