@@ -63,7 +63,8 @@ It uses `image: foodfinder-api:${IMAGE_TAG:-0.1.0}` and no build context.
 1. Portainer → **Stacks** → **Add stack**.
 2. **Name**: `foodfinder-api`.
 3. **Build method**: **Web editor**. Paste the contents of `deploy/portainer-stack-image.yml`.
-4. Set the env vars below (in the Environment section).
+4. Set the env vars below (in the Environment section) — or export them
+   from 1Password, see [Secrets via 1Password](#secrets-via-1password-service-account).
 5. **Deploy the stack**.
 
 The first time you do this, the stack starts in seconds because the
@@ -90,6 +91,8 @@ image is already built.
 | `FOODFINDER_ADMIN_PASSWORD`        | `…`                                                           |
 | `FOODFINDER_STORAGE_DIR`           | `/data/foodfinder`                                            |
 | `FOODFINDER_ALLOWED_ORIGINS`       | `https://food.treloc.com`                                     |
+
+Values live in 1Password — see [Secrets via 1Password](#secrets-via-1password-service-account).
 
 Networks: `postgresql_foodfinder_net` and `nginx-proxy-manager_default` must exist before deploying the stack. They are external to this stack.
 
@@ -133,3 +136,39 @@ Point `food.treloc.com` at the public IP of the NPM host. The proxy is shared wi
 ## Rollback
 
 Re-deploy the previous image tag. The schema is forward-compatible — V1 has not changed since the first deploy.
+
+## Secrets via 1Password (service account)
+
+Deploy credentials (Portainer, Nginx Proxy Manager, app env vars) live in
+1Password and are resolved on demand via a **service-account token**. No
+plaintext secrets on disk, in the repo, or in chat.
+
+### One-time setup
+
+1. In 1Password, create a vault named `infra`.
+2. Create these items in it:
+   - **`portainer`** (Login): `username`, `password`, website = Portainer URL.
+   - **`npm`** (Login): `username`, `password`, website = `https://proxy.treloc.com`.
+   - **`foodfinder-env`** (Login, or Secure Note with labeled fields): custom
+     fields named exactly like the stack env vars — `SPRING_DATASOURCE_URL`,
+     `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`,
+     `FOODFINDER_ADMIN_USERNAME`, `FOODFINDER_ADMIN_PASSWORD`,
+     `FOODFINDER_ALLOWED_ORIGINS`.
+3. 1Password web → **Developer → Service Accounts → New**. Grant it
+   **View** access to the `infra` vault only. Copy the `ops-...` token.
+4. On this machine: `bin/op-token-store.sh` — paste the token when prompted.
+   It is validated against 1Password and stored in the macOS Keychain
+   (`foodfinder-op/service-token`), never in a file.
+5. `bin/op-secret.sh check` — verifies the token and the vault layout
+   without printing any secret.
+
+### Usage
+
+```bash
+bin/op-secret.sh check                   # token + item presence, no secrets
+bin/op-secret.sh get portainer password  # one secret, e.g. for piping
+eval "$(bin/op-secret.sh env)"           # export PORTAINER_*, NPM_*, stack env vars
+```
+
+Use a different vault with `OP_VAULT=myvault bin/op-secret.sh env`.
+Different item/field names? Adjust the mapping at the top of `bin/op-secret.sh`.
