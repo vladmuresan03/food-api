@@ -70,6 +70,28 @@ class PublicApiTest {
     }
 
     @Test
+    void listRestaurantsPaginationAppliesAfterFilter() throws Exception {
+        // Regression: page 0 must contain ACTIVE rows even when earlier
+        // alphabetically-sorted rows are ARCHIVED. The bug applied Pageable
+        // before the status filter, so with the names below the first
+        // page would only contain the (archived) "Alpha Aaa" row.
+        restaurantCsv.parse(new StringReader("""
+                restaurant_key,name,city,latitude,longitude,status
+                alpha-aaa,Alpha Aaa,Cluj-Napoca,46.77,23.55,ARCHIVED
+                alpha-aab,Alpha Aab,Cluj-Napoca,46.77,23.55,ARCHIVED
+                zebra-zzz,Zebra Zzz,Cluj-Napoca,46.77,23.55,ACTIVE
+                """), false);
+
+        // With the bug: size=1 page=0 returns the alphabetically first
+        // global row (Alpha Aaa, ARCHIVED), then status filter strips it,
+        // so the response is []. With the fix, page 0 returns the first
+        // ACTIVE row by name = pub-r1.
+        mvc.perform(get("/api/restaurants").param("size", "1").param("page", "0"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].key").value("pub-r1"));
+    }
+
+    @Test
     void restaurantDetailReturnsProductCount() throws Exception {
         mvc.perform(get("/api/restaurants/pub-r1"))
                 .andExpect(status().isOk())

@@ -13,9 +13,6 @@ import com.foodfinder.product.ProductRepository;
 import com.foodfinder.restaurant.Restaurant;
 import com.foodfinder.restaurant.RestaurantRepository;
 import com.foodfinder.restaurant.RestaurantStatus;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -52,19 +49,22 @@ public class PublicApiService {
                                                         RestaurantStatus status, int page, int size) {
         // For the public list we default to ACTIVE only.
         RestaurantStatus effective = (status == null) ? RestaurantStatus.ACTIVE : status;
-        Pageable pageable = PageRequest.of(Math.max(0, page), Math.min(Math.max(1, size), 100),
-                Sort.by("name").ascending());
-        // simple derived query: filter by status, optional city, optional name LIKE q
-        // Spring Data JPA Specifications would be nicer, but we keep it simple.
+        int safePage = Math.max(0, page);
+        int safeSize = Math.min(Math.max(1, size), 100);
         String needle = (q == null) ? "" : q.trim().toLowerCase();
-        List<Restaurant> all = restaurants.findAll(pageable).getContent().stream()
+        String cityFilter = (city == null || city.isBlank()) ? null : city;
+
+        // Filter first, paginate after — paginating before means pages can
+        // be sparse or empty when a filter narrows the result.
+        return restaurants.findAll().stream()
                 .filter(r -> r.getStatus() == effective)
-                .filter(r -> city == null || city.isBlank() || city.equalsIgnoreCase(r.getCity()))
+                .filter(r -> cityFilter == null || cityFilter.equalsIgnoreCase(r.getCity()))
                 .filter(r -> needle.isEmpty()
                         || r.getName().toLowerCase().contains(needle)
                         || r.getRestaurantKey().toLowerCase().contains(needle))
-                .toList();
-        return all.stream()
+                .sorted(Comparator.comparing(Restaurant::getName, String.CASE_INSENSITIVE_ORDER))
+                .skip((long) safePage * safeSize)
+                .limit(safeSize)
                 .map(r -> new Dtos.RestaurantSummary(
                         r.getRestaurantKey(), r.getName(), r.getCity(),
                         r.getLatitude(), r.getLongitude(),
@@ -118,33 +118,17 @@ public class PublicApiService {
         Restaurant r = restaurants.findById(menu.getRestaurantId())
                 .orElseThrow(() -> new NoSuchElementException("Restaurant gone: " + menu.getRestaurantId()));
         List<MenuItem> items = menuItems.findByMenuIdOrderBySortOrderAsc(menu.getId());
-        // group by section, preserving first-seen order
+        // Group items by section, preserving first-seen order. Each item
+        // resolves its product + primary photo. Photo URLs are keyed by
+        // photo_key (not product_key).
         Map<String, java.util.List<Dtos.Item>> grouped = new LinkedHashMap<>();
         for (MenuItem mi : items) {
             Product p = products.findById(mi.getProductId()).orElse(null);
             if (p == null) continue;
             Photo primary = photos.findFirstByProductIdAndPrimaryPhotoTrue(p.getId()).orElse(null);
-            Dtos.Item item = new Dtos.Item(
-                    p.getProductKey(), p.getName(), p.getDescription(),
-                    mi.getPrice(), mi.getCurrency(), p.getWeightText(),
-                    mi.isAvailable(),
-                    primary == null ? null : new Dtos.ImageRef(
-                            photoContentUrl(p.getProductKey() + "/" + primary.getPhotoKey()),
-                            thumbnailUrl(p.getProductKey() + "/" + primary.getPhotoKey())));
-            // (the URL helpers above receive photo_key, not product_key — fix below)
-            grouped.computeIfAbsent(mi.getSectionName(), k -> new java.util.ArrayList<>()).add(item);
-        }
-        // rebuild items with correct image URLs (photo URLs are by photo_key, not product_key)
-        grouped.clear();
-        for (MenuItem mi : items) {
-            Product p = products.findById(mi.getProductId()).orElse(null);
-            if (p == null) continue;
-            Photo primary = photos.findFirstByProductIdAndPrimaryPhotoTrue(p.getId()).orElse(null);
-            Dtos.ImageRef img = null;
-            if (primary != null) {
-                img = new Dtos.ImageRef(photoContentUrl(primary.getPhotoKey()),
-                        thumbnailUrl(primary.getPhotoKey()));
-            }
+            Dtos.ImageRef img = (primary == null) ? null
+                    : new Dtos.ImageRef(photoContentUrl(primary.getPhotoKey()),
+                            thumbnailUrl(primary.getPhotoKey()));
             Dtos.Item item = new Dtos.Item(
                     p.getProductKey(), p.getName(), p.getDescription(),
                     mi.getPrice(), mi.getCurrency(), p.getWeightText(),
@@ -164,61 +148,83 @@ public class PublicApiService {
                                                   String section, BigDecimal minPrice, BigDecimal maxPrice,
                                                   Boolean hasPhoto, Boolean available,
                                                   int page, int size) {
-        Pageable pageable = PageRequest.of(Math.max(0, page), Math.min(Math.max(1, size), 100),
-                Sort.by("name").ascending());
+        int safePage = Math.max(0, page);
+        int safeSize = Math.min(Math.max(1, size), 100);
         String needle = (q == null) ? "" : q.trim().toLowerCase();
-        // Start from all products, then narrow.
-        // For filtering by menuKey/section/minPrice/maxPrice we need to consider menu_item rows.
-        Iterable<Product> all = products.findAll(pageable);
+        // For the simple filters we can push them down to the repository
+        // (restaurant scope and text match). The rest (menu/section/price/
+        // availability/has-photo) are evaluated in-memory because the cross-
+        // table filtering would otherwise require either Specifications or
+        // many narrow query methods, neither of which is worth the cost for
+        // a public read endpoint with this volume.
+        Iterable<Product> source = (restaurantKey != null && !restaurantKey.isBlank())
+                ? products.findByRestaurantId(restaurantIdFor(restaurantKey).orElse(-1L))
+                : products.findAll();
         java.util.List<Product> filtered = new java.util.ArrayList<>();
-        for (Product p : all) {
-            if (needle.isEmpty() || p.getName().toLowerCase().contains(needle)
-                    || p.getProductKey().toLowerCase().contains(needle)) {
-                filtered.add(p);
+        for (Product p : source) {
+            if (!needle.isEmpty()
+                    && !p.getName().toLowerCase().contains(needle)
+                    && !p.getProductKey().toLowerCase().contains(needle)) {
+                continue;
             }
+            if (menuKey != null && !menuKey.isBlank()
+                    && !productIdsInMenu(menuKey).contains(p.getId())) {
+                continue;
+            }
+            if (section != null && !section.isBlank()
+                    && !productMatchesSection(p.getId(), section)) {
+                continue;
+            }
+            if ((minPrice != null || maxPrice != null)
+                    && !productPriceInRange(p.getId(), minPrice, maxPrice)) {
+                continue;
+            }
+            if (Boolean.TRUE.equals(available) && !productAvailable(p.getId())) {
+                continue;
+            }
+            if (Boolean.TRUE.equals(hasPhoto)
+                    && photos.findByRestaurantIdAndProductIdAndStatus(
+                            p.getRestaurantId(), p.getId(), PhotoStatus.ACTIVE).isEmpty()) {
+                continue;
+            }
+            filtered.add(p);
         }
-        if (restaurantKey != null && !restaurantKey.isBlank()) {
-            Restaurant r = restaurants.findByRestaurantKey(restaurantKey).orElse(null);
-            if (r == null) return List.of();
-            Long rid = r.getId();
-            filtered = filtered.stream().filter(p -> rid.equals(p.getRestaurantId())).toList();
-        }
-        if (menuKey != null && !menuKey.isBlank()) {
-            Menu m = menus.findByMenuKey(menuKey).orElse(null);
-            if (m == null) return List.of();
-            List<Long> productIds = menuItems.findByMenuIdOrderBySortOrderAsc(m.getId()).stream()
-                    .map(MenuItem::getProductId).toList();
-            filtered = filtered.stream().filter(p -> productIds.contains(p.getId())).toList();
-        }
-        if (section != null && !section.isBlank()) {
-            String sec = section;
-            filtered = filtered.stream().filter(p -> {
-                List<MenuItem> items = menuItems.findByProductId(p.getId());
-                return items.stream().anyMatch(mi -> sec.equals(mi.getSectionName()));
-            }).toList();
-        }
-        if (minPrice != null || maxPrice != null) {
-            filtered = filtered.stream().filter(p -> {
-                List<MenuItem> items = menuItems.findByProductId(p.getId());
-                return items.stream().anyMatch(mi ->
-                        (minPrice == null || (mi.getPrice() != null && mi.getPrice().compareTo(minPrice) >= 0))
-                                && (maxPrice == null || (mi.getPrice() != null && mi.getPrice().compareTo(maxPrice) <= 0)));
-            }).toList();
-        }
-        if (Boolean.TRUE.equals(available)) {
-            filtered = filtered.stream().filter(p -> {
-                List<MenuItem> items = menuItems.findByProductId(p.getId());
-                return items.stream().anyMatch(MenuItem::isAvailable);
-            }).toList();
-        }
-        if (Boolean.TRUE.equals(hasPhoto)) {
-            filtered = filtered.stream().filter(p ->
-                    !photos.findByRestaurantIdAndProductIdAndStatus(p.getRestaurantId(), p.getId(), PhotoStatus.ACTIVE)
-                            .isEmpty()).toList();
-        }
+        // Filter first, then paginate. Sorting globally here matches the
+        // legacy Sort.by("name"); before this fix the page was sorted only
+        // within itself, so page 2 could hold items that alphabetically
+        // belong on page 0.
         return filtered.stream()
+                .sorted(Comparator.comparing(Product::getName, String.CASE_INSENSITIVE_ORDER))
+                .skip((long) safePage * safeSize)
+                .limit(safeSize)
                 .map(this::toProductSummary)
                 .toList();
+    }
+
+    private java.util.Optional<Long> restaurantIdFor(String key) {
+        return restaurants.findByRestaurantKey(key).map(Restaurant::getId);
+    }
+
+    private List<Long> productIdsInMenu(String menuKey) {
+        return menus.findByMenuKey(menuKey)
+                .map(m -> menuItems.findByMenuIdOrderBySortOrderAsc(m.getId()).stream()
+                        .map(MenuItem::getProductId).toList())
+                .orElse(List.of());
+    }
+
+    private boolean productMatchesSection(Long productId, String section) {
+        return menuItems.findByProductId(productId).stream()
+                .anyMatch(mi -> section.equals(mi.getSectionName()));
+    }
+
+    private boolean productPriceInRange(Long productId, BigDecimal min, BigDecimal max) {
+        return menuItems.findByProductId(productId).stream().anyMatch(mi ->
+                (min == null || (mi.getPrice() != null && mi.getPrice().compareTo(min) >= 0))
+                        && (max == null || (mi.getPrice() != null && mi.getPrice().compareTo(max) <= 0)));
+    }
+
+    private boolean productAvailable(Long productId) {
+        return menuItems.findByProductId(productId).stream().anyMatch(MenuItem::isAvailable);
     }
 
     public Dtos.ProductDetail productDetail(String productKey) {
