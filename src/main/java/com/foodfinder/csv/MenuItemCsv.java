@@ -27,7 +27,10 @@ public class MenuItemCsv {
 
     static final String[] HEADERS = {
             "menu_key", "product_key", "section_name", "price",
-            "currency", "available", "sort_order", "source_url"
+            "currency", "available", "sort_order",
+            // legacy column kept for compatibility with earlier exports;
+            // ignored on import (MenuItem has no source_url field):
+            "source_url"
     };
     private static final Set<String> ALLOWED = Set.of(HEADERS);
     private static final Pattern CURRENCY = Pattern.compile("^[A-Z]{3}$");

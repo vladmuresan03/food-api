@@ -97,11 +97,13 @@ public class MenuAssetStorageService {
 
     @Transactional
     public void archive(String assetKey) {
-        MenuAsset a = assets.findByAssetKey(assetKey)
-                .orElseThrow(() -> new NoSuchElementException("Asset not found: " + assetKey));
-        // We don't currently track an archived status for menu_asset; physical delete is allowed
-        // by the spec only for menu_item links. For menu_assets, the spec only mentions archive for photos.
-        // We do nothing on archive here — keep the record (and the file on disk).
-        // The admin UI may surface this endpoint later if needed.
+        // The schema has no archived status for menu_asset, and the spec
+        // doesn't define archive behaviour for assets. The current contract
+        // is "archive is not supported for menu_assets": we surface this
+        // as a 4xx-style error (UnsupportedOperationException → 501) instead
+        // of silently no-op'ing. If archive becomes a real requirement,
+        // add an is_archived column or a separate archive table.
+        throw new UnsupportedOperationException(
+                "archive is not supported for menu_assets (no archived status in schema)");
     }
 }

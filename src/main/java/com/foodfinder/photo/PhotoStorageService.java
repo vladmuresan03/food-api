@@ -137,48 +137,103 @@ public class PhotoStorageService {
     public Photo update(String photoKey, String productKey, String altText, Boolean isPrimary, PhotoStatus status) {
         Photo p = photos.findByPhotoKey(photoKey)
                 .orElseThrow(() -> new NoSuchElementException("Photo not found: " + photoKey));
+        Long previousProductId = p.getProductId();
+
+        // Resolve the new productId (if productKey was provided) without
+        // mutating the entity yet, so we can run the demote against the
+        // NEW scope before Hibernate's flush queue gets the move.
+        Long newProductId = previousProductId;
         if (productKey != null) {
             if (productKey.isBlank()) {
-                p.setProductId(null);
+                newProductId = null;
             } else {
                 var product = products.findByProductKey(productKey)
                         .orElseThrow(() -> new NoSuchElementException("Unknown product_key: " + productKey));
                 if (!product.getRestaurantId().equals(p.getRestaurantId())) {
                     throw new AdminConflictException("product_key belongs to a different restaurant than the photo");
                 }
-                p.setProductId(product.getId());
+                newProductId = product.getId();
             }
+        }
+        boolean scopeChanged = !java.util.Objects.equals(previousProductId, newProductId);
+        boolean effectiveIsPrimary = (isPrimary == null) ? p.isPrimaryPhoto() : isPrimary;
+
+        // If p is primary and the move puts it into a new scope that
+        // already has a primary, demote that one. Run the demote BEFORE
+        // mutating p so the flush queue never has two primaries in the
+        // same scope simultaneously.
+        if (scopeChanged && effectiveIsPrimary) {
+            demoteOtherPrimaryInScope(p.getRestaurantId(), newProductId, p.getPhotoKey());
+        }
+
+        // Now mutate p. Apply productKey, altText, isPrimary, status.
+        if (productKey != null) {
+            p.setProductId(newProductId);
         }
         if (altText != null) {
             p.setAltText(altText);
         }
-        if (isPrimary != null && isPrimary) {
-            Long productId = p.getProductId();
-            if (productId != null) {
-                photos.findFirstByProductIdAndPrimaryPhotoTrue(productId).ifPresent(other -> {
-                    if (!other.getPhotoKey().equals(photoKey)) {
-                        other.setPrimaryPhoto(false);
-                        photos.save(other);
-                    }
-                });
+        if (isPrimary != null) {
+            if (isPrimary) {
+                // still need to demote the existing primary in the
+                // current (now) scope if isPrimary is being set to true
+                // without a scope change
+                if (!scopeChanged) {
+                    demoteOtherPrimaryInScope(p.getRestaurantId(), p.getProductId(), p.getPhotoKey());
+                }
+                p.setPrimaryPhoto(true);
             } else {
-                photos.findFirstByRestaurantIdAndProductIdIsNullAndPrimaryPhotoTrue(p.getRestaurantId())
-                        .ifPresent(other -> {
-                            if (!other.getPhotoKey().equals(photoKey)) {
-                                other.setPrimaryPhoto(false);
-                                photos.save(other);
-                            }
-                        });
+                p.setPrimaryPhoto(false);
             }
-            p.setPrimaryPhoto(true);
-        } else if (isPrimary != null) {
-            p.setPrimaryPhoto(false);
         }
         if (status != null) {
             p.setStatus(status);
         }
         photos.save(p);
         return p;
+    }
+
+    private void demoteOtherPrimaryInScope(Long restaurantId, Long productId, String currentPhotoKey) {
+        if (productId != null) {
+            photos.findFirstByProductIdAndPrimaryPhotoTrue(productId).ifPresent(other -> {
+                if (!other.getPhotoKey().equals(currentPhotoKey)) {
+                    other.setPrimaryPhoto(false);
+                    photos.save(other);
+                }
+            });
+        } else {
+            photos.findFirstByRestaurantIdAndProductIdIsNullAndPrimaryPhotoTrue(restaurantId)
+                    .ifPresent(other -> {
+                        if (!other.getPhotoKey().equals(currentPhotoKey)) {
+                            other.setPrimaryPhoto(false);
+                            photos.save(other);
+                        }
+                    });
+        }
+    }
+
+    private void demoteOtherPrimaryInScope(Photo p) {
+        Long productId = p.getProductId();
+        if (productId != null) {
+            photos.findFirstByProductIdAndPrimaryPhotoTrue(productId).ifPresent(other -> {
+                if (!other.getPhotoKey().equals(p.getPhotoKey())) {
+                    other.setPrimaryPhoto(false);
+                    photos.save(other);
+                }
+            });
+        } else {
+            var otherOpt = photos.findFirstByRestaurantIdAndProductIdIsNullAndPrimaryPhotoTrue(p.getRestaurantId());
+            System.err.println("DEMOTE: restaurant=" + p.getRestaurantId() + " p=" + p.getPhotoKey()
+                    + " p.primary=" + p.isPrimaryPhoto() + " p.productId=" + p.getProductId()
+                    + " other=" + otherOpt.map(o -> o.getPhotoKey() + "/primary=" + o.isPrimaryPhoto()).orElse("<none>"));
+            otherOpt.ifPresent(other -> {
+                if (!other.getPhotoKey().equals(p.getPhotoKey())) {
+                    other.setPrimaryPhoto(false);
+                    photos.save(other);
+                    System.err.println("DEMOTE: demoted " + other.getPhotoKey());
+                }
+            });
+        }
     }
 
     @Transactional

@@ -6,7 +6,6 @@ import org.apache.commons.csv.CSVRecord;
 
 import java.io.IOException;
 import java.io.Reader;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
@@ -25,7 +24,7 @@ public final class CsvSupport {
     private CsvSupport() {
     }
 
-    public static CSVFormat csvFormat() {
+    private static CSVFormat csvFormat() {
         return CSVFormat.DEFAULT.builder()
                 .setHeader()
                 .setSkipHeaderRecord(true)
@@ -76,21 +75,6 @@ public final class CsvSupport {
         return v.isEmpty() ? null : v;
     }
 
-    public static boolean isEmpty(CSVRecord record, String name) {
-        return cell(record, name) == null;
-    }
-
-    public static void requireKnownHeaders(CSVRecord headerRecord, Set<String> allowed, String[] expected,
-                                          List<CsvRowError> errors) {
-        for (String name : headerRecord.toList()) {
-            String clean = stripBom(name);
-            if (!allowed.contains(clean)) {
-                errors.add(CsvRowError.of(0, clean, CsvErrorCode.UNKNOWN_HEADER,
-                        "Unknown column '" + clean + "'. Allowed: " + String.join(",", expected)));
-            }
-        }
-    }
-
     public static void validateHeaders(CSVParser parser, Set<String> allowed, List<CsvRowError> errors) {
         Set<String> seen = new TreeSet<>();
         for (String header : parser.getHeaderNames()) {
@@ -105,16 +89,6 @@ public final class CsvSupport {
                 seen.add(clean);
             }
         }
-    }
-
-    /**
-     * Returns the parser's headers with leading BOM characters stripped from
-     * each name, suitable for the importer to look up cells by.
-     */
-    public static List<String> cleanHeaders(CSVParser parser) {
-        return parser.getHeaderNames().stream()
-                .map(CsvSupport::stripBom)
-                .toList();
     }
 
     public static boolean hasFatalHeaderErrors(List<CsvRowError> errors) {
