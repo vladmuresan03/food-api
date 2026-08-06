@@ -247,6 +247,32 @@ class CsvRoundTripTest {
     }
 
     @Test
+    void menuAssetRoundTrip() throws Exception {
+        restaurantCsv.parse(new StringReader(
+                "restaurant_key,name,city,status\nrtma-rest,Asset Rest,Cluj-Napoca,ACTIVE\n"), false);
+        menuCsv.parse(new StringReader(
+                "menu_key,restaurant_key,name,menu_type,status\nrtma-menu,rtma-rest,M,PERMANENT,PUBLISHED\n"), false);
+
+        String csv = """
+                asset_key,menu_key,asset_type,source_url,size_bytes,sha256,sort_order
+                rtma-asset,rtma-menu,URL,https://example.com/menu.pdf,123456,0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef,0
+                """;
+        CsvImportReport r = menuAssetCsv.parse(new StringReader(csv), false);
+        assertThat(r.errors()).isEmpty();
+        assertThat(r.inserted()).isEqualTo(1);
+
+        StringWriter sw = new StringWriter();
+        menuAssetCsv.write(sw);
+        String exported = sw.toString();
+        assertThat(exported).contains("rtma-asset").contains("https://example.com/menu.pdf");
+
+        CsvImportReport re = menuAssetCsv.parse(new StringReader(exported), false);
+        assertThat(re.errors()).isEmpty();
+        assertThat(re.inserted()).isZero();
+        assertThat(re.updated()).isEqualTo(1);
+    }
+
+    @Test
     void photoDuplicatePrimaryInFileFailsCleanly() throws Exception {
         restaurantCsv.parse(new StringReader(
                 "restaurant_key,name,city,status\nrdp-rest,Photo Rest,Cluj-Napoca,ACTIVE\n"), false);

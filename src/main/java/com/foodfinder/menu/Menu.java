@@ -48,6 +48,12 @@ public class Menu extends Timestamped {
     private LocalDate validTo;
 
     @Column(name = "published_at")
+    // First-publish timestamp. Set by AdminMenuController.updateStatus
+    // when a menu transitions into PUBLISHED state and only if the value
+    // is still null; subsequent status changes (DRAFT, ARCHIVED, etc.)
+    // leave it untouched. The public API exposes it as a read-only
+    // marker of when the menu first went live; re-publishing does not
+    // refresh it.
     private Instant publishedAt;
 
     public Long getId() {
