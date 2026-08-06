@@ -56,6 +56,10 @@ public class PhotoCsv {
             }
 
             Set<String> seenKeys = new TreeSet<>();
+            // track primary-per-scope: "product:<id>" or "restaurant:<id>" -> row
+            // of the first primary seen in this file. A second primary for the
+            // same scope is a duplicate that the DB would reject with a 500.
+            Map<String, Integer> primarySeenAtRow = new HashMap<>();
             Map<String, Long> restaurantIdCache = new HashMap<>();
             Map<String, Long> productIdCache = new HashMap<>();
             Map<String, Long> productRestaurantCache = new HashMap<>();
@@ -143,9 +147,28 @@ public class PhotoCsv {
                 }
 
                 String externalUrl = CsvSupport.cell(record, "external_url");
+                // B4: export emits "" for missing values; nullify so the DB's
+                // ck_photo_storage_xor treats it as unset.
+                if (externalUrl != null && externalUrl.isEmpty()) {
+                    externalUrl = null;
+                }
 
                 Boolean isPrimaryRaw = CsvSupport.parseBoolean(record, "is_primary", errors, row);
                 boolean isPrimary = isPrimaryRaw != null && isPrimaryRaw;
+
+                if (isPrimary) {
+                    String scope = (productId != null)
+                            ? "product:" + productId
+                            : "restaurant:" + restaurantId;
+                    Integer priorRow = primarySeenAtRow.putIfAbsent(scope, row);
+                    if (priorRow != null) {
+                        errors.add(CsvRowError.of(row, "is_primary", CsvErrorCode.DUPLICATE_PRIMARY,
+                                "is_primary=true already declared on row " + priorRow
+                                        + " for the same "
+                                        + (productId != null ? "product" : "restaurant")));
+                        continue;
+                    }
+                }
 
                 if (dryRun) {
                     continue;

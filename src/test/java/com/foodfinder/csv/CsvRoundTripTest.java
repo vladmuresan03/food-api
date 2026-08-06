@@ -1,9 +1,13 @@
 package com.foodfinder.csv;
 
 import com.foodfinder.menu.MenuItemRepository;
+import com.foodfinder.photo.Photo;
 import com.foodfinder.photo.PhotoRepository;
+import com.foodfinder.photo.PhotoSourceType;
+import com.foodfinder.photo.PhotoStatus;
 import com.foodfinder.product.ProductRepository;
 import com.foodfinder.restaurant.RestaurantRepository;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -28,6 +32,7 @@ class CsvRoundTripTest {
     @Autowired ProductRepository products;
     @Autowired MenuItemRepository menuItems;
     @Autowired PhotoRepository photos;
+    @Autowired EntityManager entityManager;
 
     @Autowired RestaurantCsv restaurantCsv;
     @Autowired MenuCsv menuCsv;
@@ -239,5 +244,73 @@ class CsvRoundTripTest {
                 """;
         CsvImportReport r = menuItemCsv.parse(new StringReader(itemsCsv), false);
         assertThat(r.errors()).anyMatch(e -> e.code() == CsvErrorCode.PRICE_NEGATIVE);
+    }
+
+    @Test
+    void photoDuplicatePrimaryInFileFailsCleanly() throws Exception {
+        restaurantCsv.parse(new StringReader(
+                "restaurant_key,name,city,status\nrdp-rest,Photo Rest,Cluj-Napoca,ACTIVE\n"), false);
+        productCsv.parse(new StringReader(
+                "product_key,restaurant_key,name,status\nrdp-prod,rdp-rest,P,ACTIVE\n"), false);
+
+        // Two photos both claiming is_primary=true for the same product.
+        // The DB's ux_photo_primary_per_product would surface this as a
+        // 500; the importer must catch it first.
+        String csv = """
+                photo_key,restaurant_key,product_key,source_type,external_url,alt_text,is_primary,status
+                rdp-photo-a,rdp-rest,rdp-prod,RESTAURANT_OFFICIAL,https://a.example/,A,true,ACTIVE
+                rdp-photo-b,rdp-rest,rdp-prod,RESTAURANT_OFFICIAL,https://b.example/,B,true,ACTIVE
+                """;
+        CsvImportReport r = photoCsv.parse(new StringReader(csv), false);
+        assertThat(r.errors()).anyMatch(e -> e.code() == CsvErrorCode.DUPLICATE_PRIMARY);
+    }
+
+    @Test
+    void photoRoundTripPreservesStorageKey() throws Exception {
+        // B4: a photo with storage_key set must round-trip cleanly.
+        // The bug: write() emits "" for missing external_url; the DB's
+        // ck_photo_storage_xor fires on re-import because empty string
+        // is not NULL.
+        // storage_key is export-only (per PhotoCsv.HEADERS comment), so
+        // the first import goes via external_url. The test creates the
+        // photo by writing it directly to the repository (simulating a
+        // real upload) and then exercises the export / re-import path.
+        restaurantCsv.parse(new StringReader(
+                "restaurant_key,name,city,status\nrtp-rest,Round Trip,Cluj-Napoca,ACTIVE\n"), false);
+        productCsv.parse(new StringReader(
+                "product_key,restaurant_key,name,status\nrtp-prod,rtp-rest,P,ACTIVE\n"), false);
+
+        long restaurantId = restaurants.findByRestaurantKey("rtp-rest").orElseThrow().getId();
+        long productId = products.findByProductKey("rtp-prod").orElseThrow().getId();
+        Photo seeded = new Photo();
+        seeded.setPhotoKey("rtp-photo");
+        seeded.setRestaurantId(restaurantId);
+        seeded.setProductId(productId);
+        seeded.setSourceType(PhotoSourceType.UPLOAD);
+        seeded.setStorageKey("storage/rtp-photo.jpg");
+        seeded.setThumbnailStorageKey("storage/rtp-photo-thumb.jpg");
+        seeded.setMimeType("image/jpeg");
+        seeded.setWidth(800);
+        seeded.setHeight(600);
+        seeded.setAltText("Round Trip Photo");
+        seeded.setPrimaryPhoto(true);
+        seeded.setStatus(PhotoStatus.ACTIVE);
+        photos.save(seeded);
+        entityManager.flush();
+
+        StringWriter sw = new StringWriter();
+        photoCsv.write(sw);
+        String exported = sw.toString();
+
+        CsvImportReport re = photoCsv.parse(new StringReader(exported), false);
+        // The bug surfaces as either a parse error (when the importer
+        // detects the empty string) or a constraint violation; with the
+        // fix the round-trip is clean and the in-memory photo keeps
+        // storage_key, external_url stays null.
+        assertThat(re.errors()).isEmpty();
+        entityManager.flush();
+        Photo reloaded = photos.findByPhotoKey("rtp-photo").orElseThrow();
+        assertThat(reloaded.getStorageKey()).isEqualTo("storage/rtp-photo.jpg");
+        assertThat(reloaded.getExternalUrl()).isNull();
     }
 }
