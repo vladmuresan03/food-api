@@ -1,5 +1,7 @@
 package com.foodfinder.csv;
 
+import com.foodfinder.IntegrationTest;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -18,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>Skipped silently if the CSV files are not present (e.g. CI without
  * the legacy-export step).</p>
  */
-@SpringBootTest
+@IntegrationTest
 @Transactional
 class LegacyImportTest {
 

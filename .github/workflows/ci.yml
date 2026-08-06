@@ -9,24 +9,9 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_USER: foodfinder
-          POSTGRES_PASSWORD: foodfinder
-          POSTGRES_DB: foodfinder_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U foodfinder -d foodfinder_test"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 10
+    # PostgreSQL is provided per-test-class via Testcontainers; no service
+    # container is needed here.
     env:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/foodfinder_test
-      SPRING_DATASOURCE_USERNAME: foodfinder
-      SPRING_DATASOURCE_PASSWORD: foodfinder
       FOODFINDER_ADMIN_USERNAME: test-admin
       FOODFINDER_ADMIN_PASSWORD: test-password
       FOODFINDER_STORAGE_DIR: ./target/test-storage

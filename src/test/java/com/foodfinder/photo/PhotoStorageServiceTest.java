@@ -1,5 +1,7 @@
 package com.foodfinder.photo;
 
+import com.foodfinder.IntegrationTest;
+
 import com.foodfinder.csv.ProductCsv;
 import com.foodfinder.csv.RestaurantCsv;
 import com.foodfinder.product.ProductRepository;
@@ -21,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * restaurant-level primary, otherwise the unique partial index
  * ux_photo_primary_per_restaurant fires and the update 500s.
  */
-@SpringBootTest
+@IntegrationTest
 @Transactional
 class PhotoStorageServiceTest {
 

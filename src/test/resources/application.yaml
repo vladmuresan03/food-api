@@ -1,15 +1,7 @@
-spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/foodfinder_test
-    username: foodfinder
-    password: foodfinder
-  jpa:
-    hibernate:
-      ddl-auto: validate
-    open-in-view: false
-  flyway:
-    enabled: true
-    locations: classpath:db/migration
+# Test-only overrides. The DataSource is provided by Testcontainers via
+# @ServiceConnection, so the spring.datasource.* keys that used to live
+# here are gone. The foodfinder.* properties below are read by
+# SecurityConfig and CsvController when running tests.
 
 foodfinder:
   admin:

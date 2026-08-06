@@ -1,5 +1,7 @@
 package com.foodfinder.schema;
 
+import com.foodfinder.IntegrationTest;
+
 import com.foodfinder.menu.MenuAssetRepository;
 import com.foodfinder.menu.MenuItemRepository;
 import com.foodfinder.menu.MenuRepository;
@@ -21,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * constraint is enforced at the database level (inserts bypass JPA on
  * purpose, going straight through JDBC).
  */
-@SpringBootTest
+@IntegrationTest
 @Transactional
 class SchemaConstraintsTest {
 

@@ -1,5 +1,7 @@
 package com.foodfinder.csv;
 
+import com.foodfinder.IntegrationTest;
+
 import com.foodfinder.menu.MenuItemRepository;
 import com.foodfinder.photo.Photo;
 import com.foodfinder.photo.PhotoRepository;
@@ -10,7 +12,6 @@ import com.foodfinder.restaurant.RestaurantRepository;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.StringReader;
@@ -24,7 +25,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * Each test is wrapped in a transaction that rolls back, so tests
  * do not leak state into each other.
  */
-@SpringBootTest
+@IntegrationTest
 @Transactional
 class CsvRoundTripTest {
 
