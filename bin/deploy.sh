@@ -95,8 +95,8 @@ if [ "$have_image" = "yes" ]; then
     echo "  present, skipping build"
 else
     echo "  absent, building via remote docker build (this takes several minutes)"
-    remote="$(python3 -c "import urllib.parse; print(urllib.parse.quote(sys.argv[1]+'#'+sys.argv[2], safe=''))" "$REPO_URL" "$GIT_REF")"
-    tag="$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]+':'+sys.argv[2], safe=''))" "foodfinder-api" "$IMAGE_TAG")"
+    remote="$(python3 -c "import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1]+'#'+sys.argv[2], safe=''))" "$REPO_URL" "$GIT_REF")"
+    tag="$(python3 -c "import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1]+':'+sys.argv[2], safe=''))" "foodfinder-api" "$IMAGE_TAG")"
     build_log="$(mktemp -t foodfinder-build.XXXXXX.log)"
     http_code=$(curl -sk -N -m 1800 -X POST \
         "$P/endpoints/$ENDPOINT_ID/docker/build?t=$tag&remote=$remote" \
