@@ -212,30 +212,6 @@ public class PhotoStorageService {
         }
     }
 
-    private void demoteOtherPrimaryInScope(Photo p) {
-        Long productId = p.getProductId();
-        if (productId != null) {
-            photos.findFirstByProductIdAndPrimaryPhotoTrue(productId).ifPresent(other -> {
-                if (!other.getPhotoKey().equals(p.getPhotoKey())) {
-                    other.setPrimaryPhoto(false);
-                    photos.save(other);
-                }
-            });
-        } else {
-            var otherOpt = photos.findFirstByRestaurantIdAndProductIdIsNullAndPrimaryPhotoTrue(p.getRestaurantId());
-            System.err.println("DEMOTE: restaurant=" + p.getRestaurantId() + " p=" + p.getPhotoKey()
-                    + " p.primary=" + p.isPrimaryPhoto() + " p.productId=" + p.getProductId()
-                    + " other=" + otherOpt.map(o -> o.getPhotoKey() + "/primary=" + o.isPrimaryPhoto()).orElse("<none>"));
-            otherOpt.ifPresent(other -> {
-                if (!other.getPhotoKey().equals(p.getPhotoKey())) {
-                    other.setPrimaryPhoto(false);
-                    photos.save(other);
-                    System.err.println("DEMOTE: demoted " + other.getPhotoKey());
-                }
-            });
-        }
-    }
-
     @Transactional
     public void archive(String photoKey) {
         Photo p = photos.findByPhotoKey(photoKey)
