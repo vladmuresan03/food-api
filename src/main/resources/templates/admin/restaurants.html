@@ -59,12 +59,18 @@
                             style="background:transparent;border:0;color:#dc2626;cursor:pointer;font-size:0.85rem;padding:0;"
                             onclick="return confirm('Archive this restaurant? It will no longer be visible to consumers.')">Archive</button>
                 </form>
-                <form th:action="@{'/admin/restaurants/' + ${r.restaurantKey} + '/hard-delete'}"
+                <!-- Hard delete is only available after Archive, as a two-step guard:
+                     first Archive (soft, reversible by re-activate), then Hard delete
+                     (irreversible, cascades to all child rows). The confirmHardDelete()
+                     call below requires the operator to type the exact key before the
+                     form submits, so a misclick cannot destroy a row. -->
+                <form th:if="${r.status == 'ARCHIVED'}"
+                      th:action="@{'/admin/restaurants/' + ${r.restaurantKey} + '/hard-delete'}"
                       method="post" style="display:inline;margin-left:0.5rem;">
                     <button type="submit"
                             style="background:transparent;border:0;color:#991b1b;cursor:pointer;font-size:0.85rem;padding:0;font-weight:600;"
-                            title="Cascades to menus, products, photos, menu_assets, nutrition, ingredients"
-                            onclick="return confirm('PERMANENTLY delete restaurant ' + [[${r.restaurantKey}]] + '? This CASCADES to all menus, products, photos, menu_assets, nutrition, ingredients. THIS CANNOT BE UNDONE. Type OK to continue.')">Delete (hard)</button>
+                            title="Cascades to menus, products, photos, menu_assets, nutrition, ingredients. Only available after Archive."
+                            th:onclick="return confirmHardDelete([[${r.restaurantKey}]])">Delete (hard)</button>
                 </form>
             </td>
         </tr>

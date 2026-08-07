@@ -313,12 +313,22 @@ public class AdminViewController {
      * Hard delete (cascades through V8 FK CASCADE). Use for
      * GDPR right-to-be-forgotten or accidental-import cleanup; for
      * normal "closed for business" use the archive button instead.
+     *
+     * <p>Two-step guard: the restaurant must be {@code ARCHIVED}
+     * first. The UI hides the button otherwise, but this is enforced
+     * server-side so a direct POST/curl can't bypass the UI.</p>
      */
     @PostMapping("/restaurants/{key}/hard-delete")
     public String hardDeleteRestaurant(@PathVariable("key") String key, Authentication auth,
                                        RedirectAttributes ra) {
         Restaurant r = restaurants.findByRestaurantKey(key)
                 .orElseThrow(() -> new NoSuchElementException("Restaurant not found: " + key));
+        if (r.getStatus() != RestaurantStatus.ARCHIVED) {
+            ra.addFlashAttribute("errorMessage",
+                    "Hard delete requires the entity to be archived first. "
+                            + "Archive '" + key + "' before deleting. Current status: " + r.getStatus());
+            return "redirect:/admin/restaurants";
+        }
         restaurants.delete(r);
         if (auth != null) auth.getName();
         ra.addFlashAttribute("successMessage", "Restaurant '" + key + "' permanently deleted");
@@ -502,12 +512,22 @@ public class AdminViewController {
      * Hard delete (cascades through V8 FK CASCADE to menu_items and
      * menu_assets). Use for cleanup of mistaken imports; for normal
      * "out of season" use the archive button instead.
+     *
+     * <p>Two-step guard: the menu must be {@code ARCHIVED} first.
+     * Server-side enforcement so a direct POST/curl can't bypass
+     * the UI.</p>
      */
     @PostMapping("/menus/{key}/hard-delete")
     public String hardDeleteMenu(@PathVariable("key") String key, Authentication auth,
                                  RedirectAttributes ra) {
         Menu m = menus.findByMenuKey(key)
                 .orElseThrow(() -> new NoSuchElementException("Menu not found: " + key));
+        if (m.getStatus() != MenuStatus.ARCHIVED) {
+            ra.addFlashAttribute("errorMessage",
+                    "Hard delete requires the menu to be archived first. "
+                            + "Archive '" + key + "' before deleting. Current status: " + m.getStatus());
+            return "redirect:/admin/menus";
+        }
         menus.delete(m);
         if (auth != null) auth.getName();
         ra.addFlashAttribute("successMessage", "Menu '" + key + "' permanently deleted");
@@ -659,12 +679,22 @@ public class AdminViewController {
      * product_nutrition, product_ingredient). Use for cleanup of
      * mistaken imports; for normal "no longer served" use the archive
      * button instead.
+     *
+     * <p>Two-step guard: the product must be {@code ARCHIVED} first.
+     * Server-side enforcement so a direct POST/curl can't bypass
+     * the UI.</p>
      */
     @PostMapping("/products/{key}/hard-delete")
     public String hardDeleteProduct(@PathVariable("key") String key, Authentication auth,
                                     RedirectAttributes ra) {
         Product p = products.findByProductKey(key)
                 .orElseThrow(() -> new NoSuchElementException("Product not found: " + key));
+        if (p.getStatus() != ProductStatus.ARCHIVED) {
+            ra.addFlashAttribute("errorMessage",
+                    "Hard delete requires the product to be archived first. "
+                            + "Archive '" + key + "' before deleting. Current status: " + p.getStatus());
+            return "redirect:/admin/products";
+        }
         products.delete(p);
         if (auth != null) auth.getName();
         ra.addFlashAttribute("successMessage", "Product '" + key + "' permanently deleted");

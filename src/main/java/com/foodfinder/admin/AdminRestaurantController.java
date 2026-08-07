@@ -111,13 +111,26 @@ public class AdminRestaurantController {
      * Use only for GDPR right-to-be-forgotten or accidental-import
      * cleanup; for normal "this restaurant is closed", prefer
      * {@code PATCH /{key}/status} with status=ARCHIVED.
+     *
+     * <p>Two-step guard: the entity must be {@code ARCHIVED} first.
+     * This is enforced server-side so a direct POST/curl can't bypass
+     * the UI's button visibility check.</p>
      */
     @DeleteMapping("/{restaurantKey}")
     public ResponseEntity<Void> hardDelete(@PathVariable String restaurantKey) {
         Restaurant r = repository.findByRestaurantKey(restaurantKey)
                 .orElseThrow(() -> new NoSuchElementException("Restaurant not found: " + restaurantKey));
+        requireArchived(r.getStatus(), restaurantKey);
         repository.delete(r);
         return ResponseEntity.noContent().build();
+    }
+
+    private static void requireArchived(RestaurantStatus status, String key) {
+        if (status != RestaurantStatus.ARCHIVED) {
+            throw new AdminConflictException(
+                    "Hard delete requires the entity to be archived first. "
+                            + "Archive '" + key + "' before deleting. Current status: " + status);
+        }
     }
 
     // ------------------------------------------------------------------ DTOs

@@ -29,12 +29,16 @@
             <button type="submit" class="secondary"
                     onclick="return confirm('Archive this product? It will no longer be visible to consumers.')">Archive</button>
         </form>
-        <form th:action="@{'/admin/products/' + ${p.productKey} + '/hard-delete'}"
+        <!-- Hard delete is only available after Archive, as a two-step guard.
+             confirmHardDelete() requires the operator to type the exact product_key
+             before the form submits. -->
+        <form th:if="${p.status.name() == 'ARCHIVED'}"
+              th:action="@{'/admin/products/' + ${p.productKey} + '/hard-delete'}"
               method="post" style="display:inline;">
             <button type="submit"
                     style="background:#991b1b;color:white;border:0;cursor:pointer;padding:0.4rem 0.8rem;border-radius:0.3rem;"
-                    title="Cascades to menu_items, photos, nutrition, ingredients"
-                    onclick="return confirm('PERMANENTLY delete product ' + [[${p.productKey}]] + '? This CASCADES to menu_items, photos, nutrition, ingredients. THIS CANNOT BE UNDONE.')">Delete (hard)</button>
+                    title="Cascades to menu_items, photos, nutrition, ingredients. Only available after Archive."
+                    th:onclick="return confirmHardDelete([[${p.productKey}]])">Delete (hard)</button>
         </form>
     </div>
 

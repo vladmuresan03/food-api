@@ -106,10 +106,19 @@ public class AdminMenuController {
      * CASCADE). Use only when the menu should not exist at all; for
      * normal "this menu is no longer in season", prefer
      * {@code PATCH /{key}/status} with status=ARCHIVED.
+     *
+     * <p>Two-step guard: the menu must be {@code ARCHIVED} first.
+     * Server-side enforcement so a direct POST/curl can't bypass
+     * the UI's button visibility check.</p>
      */
     @DeleteMapping("/{menuKey}")
     public ResponseEntity<Void> hardDelete(@PathVariable String menuKey) {
         Menu m = loadOrThrow(menuKey);
+        if (m.getStatus() != MenuStatus.ARCHIVED) {
+            throw new AdminConflictException(
+                    "Hard delete requires the menu to be archived first. "
+                            + "Archive '" + menuKey + "' before deleting. Current status: " + m.getStatus());
+        }
         menus.delete(m);
         return ResponseEntity.noContent().build();
     }

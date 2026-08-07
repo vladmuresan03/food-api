@@ -54,12 +54,16 @@
                             style="background:transparent;border:0;color:#dc2626;cursor:pointer;font-size:0.85rem;padding:0;"
                             onclick="return confirm('Archive this menu? It will no longer be visible to consumers.')">Archive</button>
                 </form>
-                <form th:action="@{'/admin/menus/' + ${row.menu.menuKey} + '/hard-delete'}"
+                <!-- Hard delete is only available after Archive, as a two-step guard.
+                     confirmHardDelete() requires the operator to type the exact menu_key
+                     before the form submits. -->
+                <form th:if="${row.menu.status.name() == 'ARCHIVED'}"
+                      th:action="@{'/admin/menus/' + ${row.menu.menuKey} + '/hard-delete'}"
                       method="post" style="display:inline;margin-left:0.5rem;">
                     <button type="submit"
                             style="background:transparent;border:0;color:#991b1b;cursor:pointer;font-size:0.85rem;padding:0;font-weight:600;"
-                            title="Cascades to menu_items and menu_assets"
-                            onclick="return confirm('PERMANENTLY delete menu ' + [[${row.menu.menuKey}]] + '? This CASCADES to all menu_items and menu_assets. THIS CANNOT BE UNDONE.')">Delete (hard)</button>
+                            title="Cascades to menu_items and menu_assets. Only available after Archive."
+                            th:onclick="return confirmHardDelete([[${row.menu.menuKey}]])">Delete (hard)</button>
                 </form>
             </td>
         </tr>

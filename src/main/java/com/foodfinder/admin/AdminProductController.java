@@ -99,10 +99,19 @@ public class AdminProductController {
      * overlays). Use only when the product should not exist at all;
      * for normal "this product is no longer served", prefer
      * {@code PATCH /{key}/status} with status=ARCHIVED.
+     *
+     * <p>Two-step guard: the product must be {@code ARCHIVED} first.
+     * Server-side enforcement so a direct POST/curl can't bypass
+     * the UI's button visibility check.</p>
      */
     @DeleteMapping("/{productKey}")
     public ResponseEntity<Void> hardDelete(@PathVariable String productKey) {
         Product p = loadOrThrow(productKey);
+        if (p.getStatus() != ProductStatus.ARCHIVED) {
+            throw new AdminConflictException(
+                    "Hard delete requires the product to be archived first. "
+                            + "Archive '" + productKey + "' before deleting. Current status: " + p.getStatus());
+        }
         products.delete(p);
         return ResponseEntity.noContent().build();
     }

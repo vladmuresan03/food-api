@@ -70,5 +70,26 @@
     <a th:href="@{/admin/imports}" th:classappend="${active == 'imports'} ? 'active' : ''">Import history</a>
 </nav>
 
+<!-- Shared client-side helper for destructive actions. Use the
+     confirmHardDelete(key) function in a button's onclick to require
+     the operator to type the entity's key before the form submits.
+     Cancellable (returns false) on Escape or mismatch. -->
+<th:block th:fragment="scripts">
+    <script>
+        function confirmHardDelete(key) {
+            var typed = window.prompt(
+                'To PERMANENTLY delete this and all its child rows, type the key to confirm:\n\n'
+                + key
+                + '\n\n(Cancel or any other input aborts the action.)');
+            if (typed === null) return false;
+            if (typed !== key) {
+                window.alert('Key did not match. Cancelled.');
+                return false;
+            }
+            return true;
+        }
+    </script>
+</th:block>
+
 </body>
 </html>

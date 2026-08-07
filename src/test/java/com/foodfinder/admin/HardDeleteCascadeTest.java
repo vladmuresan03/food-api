@@ -103,6 +103,8 @@ class HardDeleteCascadeTest {
 
     @Test
     void deleteRestaurantRestDeletesIt() throws Exception {
+        archiveRestaurant("hd-r");
+
         mvc.perform(delete("/admin/api/restaurants/hd-r")
                         .with(httpBasic("test-admin", "test-password"))
                         .with(csrf()))
@@ -120,6 +122,8 @@ class HardDeleteCascadeTest {
         assertThat(nutritions.findById(productId)).isPresent();
         assertThat(ingredients.findByIdProductIdOrderByIdPositionAsc(productId)).hasSize(2);
 
+        archiveRestaurant("hd-r");
+
         mvc.perform(delete("/admin/api/restaurants/hd-r")
                         .with(httpBasic("test-admin", "test-password"))
                         .with(csrf()))
@@ -136,6 +140,8 @@ class HardDeleteCascadeTest {
 
     @Test
     void deleteRestaurantFormPostHardDelete() throws Exception {
+        archiveRestaurant("hd-r");
+
         mvc.perform(post("/admin/restaurants/hd-r/hard-delete")
                         .with(httpBasic("test-admin", "test-password"))
                         .with(csrf()))
@@ -155,10 +161,36 @@ class HardDeleteCascadeTest {
                 .andExpect(status().isNotFound());
     }
 
+    @Test
+    void hardDeleteActiveRestaurantRejectedRest() throws Exception {
+        // No archive step: the seeded restaurant is ACTIVE. The REST
+        // endpoint must refuse with 409 Conflict.
+        mvc.perform(delete("/admin/api/restaurants/hd-r")
+                        .with(httpBasic("test-admin", "test-password"))
+                        .with(csrf()))
+                .andExpect(status().is4xxClientError());
+
+        assertThat(restaurants.findByRestaurantKey("hd-r")).isPresent();
+    }
+
+    @Test
+    void hardDeleteActiveRestaurantRejectedForm() throws Exception {
+        mvc.perform(post("/admin/restaurants/hd-r/hard-delete")
+                        .with(httpBasic("test-admin", "test-password"))
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/restaurants"));
+
+        // The entity must still be there, untouched.
+        assertThat(restaurants.findByRestaurantKey("hd-r")).isPresent();
+    }
+
     // ------------------------------------------------------------------ menu hard-delete
 
     @Test
     void deleteMenuRestDeletesItAndItsItems() throws Exception {
+        archiveMenu("hd-m");
+
         Long menuId = menus.findByMenuKey("hd-m").orElseThrow().getId();
         assertThat(menuItems.findByMenuIdOrderBySortOrderAsc(menuId)).hasSize(1);
 
@@ -176,6 +208,8 @@ class HardDeleteCascadeTest {
 
     @Test
     void deleteMenuFormPostHardDelete() throws Exception {
+        archiveMenu("hd-m");
+
         mvc.perform(post("/admin/menus/hd-m/hard-delete")
                         .with(httpBasic("test-admin", "test-password"))
                         .with(csrf()))
@@ -185,10 +219,22 @@ class HardDeleteCascadeTest {
         assertThat(menus.findByMenuKey("hd-m")).isEmpty();
     }
 
+    @Test
+    void hardDeleteActiveMenuRejectedRest() throws Exception {
+        mvc.perform(delete("/admin/api/menus/hd-m")
+                        .with(httpBasic("test-admin", "test-password"))
+                        .with(csrf()))
+                .andExpect(status().is4xxClientError());
+
+        assertThat(menus.findByMenuKey("hd-m")).isPresent();
+    }
+
     // ------------------------------------------------------------------ product hard-delete
 
     @Test
     void deleteProductRestDeletesItAndItsOverlays() throws Exception {
+        archiveProduct("hd-p");
+
         Long productId = products.findByProductKey("hd-p").orElseThrow().getId();
         assertThat(nutritions.findById(productId)).isPresent();
         assertThat(ingredients.findByIdProductIdOrderByIdPositionAsc(productId)).hasSize(2);
@@ -210,6 +256,8 @@ class HardDeleteCascadeTest {
 
     @Test
     void deleteProductFormPostHardDelete() throws Exception {
+        archiveProduct("hd-p");
+
         mvc.perform(post("/admin/products/hd-p/hard-delete")
                         .with(httpBasic("test-admin", "test-password"))
                         .with(csrf()))
@@ -217,6 +265,16 @@ class HardDeleteCascadeTest {
                 .andExpect(redirectedUrl("/admin/products"));
 
         assertThat(products.findByProductKey("hd-p")).isEmpty();
+    }
+
+    @Test
+    void hardDeleteActiveProductRejectedRest() throws Exception {
+        mvc.perform(delete("/admin/api/products/hd-p")
+                        .with(httpBasic("test-admin", "test-password"))
+                        .with(csrf()))
+                .andExpect(status().is4xxClientError());
+
+        assertThat(products.findByProductKey("hd-p")).isPresent();
     }
 
     @Test
@@ -233,5 +291,29 @@ class HardDeleteCascadeTest {
         // Children survive an archive (archive != delete).
         assertThat(menus.findByMenuKey("hd-m")).isPresent();
         assertThat(products.findByProductKey("hd-p")).isPresent();
+    }
+
+    // ------------------------------------------------------------------ helpers
+
+    /** Drive the restaurant into ARCHIVED via the form endpoint. */
+    private void archiveRestaurant(String key) throws Exception {
+        mvc.perform(post("/admin/restaurants/" + key + "/archive")
+                        .with(httpBasic("test-admin", "test-password"))
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection());
+    }
+
+    private void archiveMenu(String key) throws Exception {
+        mvc.perform(post("/admin/menus/" + key + "/archive")
+                        .with(httpBasic("test-admin", "test-password"))
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection());
+    }
+
+    private void archiveProduct(String key) throws Exception {
+        mvc.perform(post("/admin/products/" + key + "/archive")
+                        .with(httpBasic("test-admin", "test-password"))
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection());
     }
 }
