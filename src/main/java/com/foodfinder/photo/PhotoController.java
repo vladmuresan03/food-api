@@ -81,8 +81,9 @@ public class PhotoController {
             @RequestParam("restaurantKey") String restaurantKey,
             @RequestParam(value = "productKey", required = false) String productKey,
             @RequestParam(value = "altText", required = false) String altText,
-            @RequestParam(value = "isPrimary", defaultValue = "false") boolean isPrimary) throws IOException {
-        return service.upload(restaurantKey, productKey, altText, isPrimary, file);
+            @RequestParam(value = "isPrimary", defaultValue = "false") boolean isPrimary,
+            org.springframework.security.core.Authentication auth) throws IOException {
+        return service.upload(restaurantKey, productKey, altText, isPrimary, file, actor(auth));
     }
 
     @PutMapping("/admin/api/photos/{photoKey}")
@@ -90,13 +91,19 @@ public class PhotoController {
                         @RequestParam(value = "productKey", required = false) String productKey,
                         @RequestParam(value = "altText", required = false) String altText,
                         @RequestParam(value = "isPrimary", required = false) Boolean isPrimary,
-                        @RequestParam(value = "status", required = false) PhotoStatus status) {
-        return service.update(photoKey, productKey, altText, isPrimary, status);
+                        @RequestParam(value = "status", required = false) PhotoStatus status,
+                        org.springframework.security.core.Authentication auth) {
+        return service.update(photoKey, productKey, altText, isPrimary, status, actor(auth));
     }
 
     @DeleteMapping("/admin/api/photos/{photoKey}")
-    public ResponseEntity<Void> delete(@PathVariable String photoKey) {
-        service.archive(photoKey);
+    public ResponseEntity<Void> delete(@PathVariable String photoKey,
+                                       org.springframework.security.core.Authentication auth) {
+        service.archive(photoKey, actor(auth));
         return ResponseEntity.noContent().build();
+    }
+
+    private static String actor(org.springframework.security.core.Authentication auth) {
+        return auth == null ? null : auth.getName();
     }
 }

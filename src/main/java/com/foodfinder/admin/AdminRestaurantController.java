@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -43,12 +44,14 @@ public class AdminRestaurantController {
     }
 
     @PostMapping
-    public ResponseEntity<RestaurantView> create(@RequestBody @Valid RestaurantUpsert body) {
+    public ResponseEntity<RestaurantView> create(@RequestBody @Valid RestaurantUpsert body,
+                                                 Authentication auth) {
         if (repository.existsByRestaurantKey(body.restaurantKey())) {
             throw new AdminConflictException("restaurant_key already exists: " + body.restaurantKey());
         }
         Restaurant r = new Restaurant();
         apply(r, body);
+        r.setUpdatedBy(actor(auth));
         repository.save(r);
         return ResponseEntity.ok(RestaurantView.of(r));
     }
@@ -60,20 +63,28 @@ public class AdminRestaurantController {
 
     @PutMapping("/{restaurantKey}")
     public RestaurantView update(@PathVariable String restaurantKey,
-                                 @RequestBody @Valid RestaurantUpsert body) {
+                                 @RequestBody @Valid RestaurantUpsert body,
+                                 Authentication auth) {
         Restaurant r = loadOrThrow(restaurantKey);
         apply(r, body);
+        r.setUpdatedBy(actor(auth));
         repository.save(r);
         return RestaurantView.of(r);
     }
 
     @PatchMapping("/{restaurantKey}/status")
     public RestaurantView updateStatus(@PathVariable String restaurantKey,
-                                       @RequestBody StatusUpdate body) {
+                                       @RequestBody StatusUpdate body,
+                                       Authentication auth) {
         Restaurant r = loadOrThrow(restaurantKey);
         r.setStatus(body.status());
+        r.setUpdatedBy(actor(auth));
         repository.save(r);
         return RestaurantView.of(r);
+    }
+
+    private static String actor(Authentication auth) {
+        return auth == null ? null : auth.getName();
     }
 
     private Restaurant loadOrThrow(String key) {

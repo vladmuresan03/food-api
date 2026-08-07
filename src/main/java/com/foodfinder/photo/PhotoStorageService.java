@@ -49,6 +49,12 @@ public class PhotoStorageService {
     @Transactional
     public Photo upload(String restaurantKey, String productKey, String altText,
                         boolean isPrimary, MultipartFile file) throws IOException {
+        return upload(restaurantKey, productKey, altText, isPrimary, file, null);
+    }
+
+    @Transactional
+    public Photo upload(String restaurantKey, String productKey, String altText,
+                        boolean isPrimary, MultipartFile file, String actor) throws IOException {
         if (file.isEmpty()) {
             throw new IllegalArgumentException("Uploaded file is empty");
         }
@@ -129,12 +135,19 @@ public class PhotoStorageService {
         p.setPrimaryPhoto(isPrimary);
         p.setStatus(PhotoStatus.ACTIVE);
         p.setSha256(sha);
+        p.setUpdatedBy(actor);
         photos.save(p);
         return p;
     }
 
     @Transactional
     public Photo update(String photoKey, String productKey, String altText, Boolean isPrimary, PhotoStatus status) {
+        return update(photoKey, productKey, altText, isPrimary, status, null);
+    }
+
+    @Transactional
+    public Photo update(String photoKey, String productKey, String altText, Boolean isPrimary,
+                        PhotoStatus status, String actor) {
         Photo p = photos.findByPhotoKey(photoKey)
                 .orElseThrow(() -> new NoSuchElementException("Photo not found: " + photoKey));
         Long previousProductId = p.getProductId();
@@ -189,6 +202,7 @@ public class PhotoStorageService {
         if (status != null) {
             p.setStatus(status);
         }
+        p.setUpdatedBy(actor);
         photos.save(p);
         return p;
     }
@@ -214,9 +228,15 @@ public class PhotoStorageService {
 
     @Transactional
     public void archive(String photoKey) {
+        archive(photoKey, null);
+    }
+
+    @Transactional
+    public void archive(String photoKey, String actor) {
         Photo p = photos.findByPhotoKey(photoKey)
                 .orElseThrow(() -> new NoSuchElementException("Photo not found: " + photoKey));
         p.setStatus(PhotoStatus.ARCHIVED);
+        p.setUpdatedBy(actor);
         photos.save(p);
     }
 

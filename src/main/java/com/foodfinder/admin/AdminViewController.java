@@ -205,6 +205,7 @@ public class AdminViewController {
                                    @RequestParam(required = false) BigDecimal latitude,
                                    @RequestParam(required = false) BigDecimal longitude,
                                    @RequestParam(required = false) RestaurantStatus status,
+                                   Authentication auth,
                                    RedirectAttributes ra, Model model) {
         try {
             if (restaurants.existsByRestaurantKey(restaurantKey)) {
@@ -213,6 +214,7 @@ public class AdminViewController {
             Restaurant r = new Restaurant();
             applyRestaurant(r, restaurantKey, name, websiteUrl, addressLine, city,
                     latitude, longitude, status);
+            r.setUpdatedBy(actor(auth));
             restaurants.save(r);
             ra.addFlashAttribute("successMessage", "Restaurant '" + r.getRestaurantKey() + "' created");
             return "redirect:/admin/restaurants";
@@ -235,12 +237,14 @@ public class AdminViewController {
                                    @RequestParam(required = false) BigDecimal latitude,
                                    @RequestParam(required = false) BigDecimal longitude,
                                    @RequestParam(required = false) RestaurantStatus status,
+                                   Authentication auth,
                                    RedirectAttributes ra, Model model) {
         Restaurant r = restaurants.findByRestaurantKey(key)
                 .orElseThrow(() -> new NoSuchElementException("Restaurant not found: " + key));
         try {
             applyRestaurant(r, key, name, websiteUrl, addressLine, city,
                     latitude, longitude, status);
+            r.setUpdatedBy(actor(auth));
             restaurants.save(r);
             ra.addFlashAttribute("successMessage", "Restaurant '" + r.getRestaurantKey() + "' updated");
             return "redirect:/admin/restaurants";
@@ -256,23 +260,31 @@ public class AdminViewController {
     }
 
     @PostMapping("/restaurants/{key}/archive")
-    public String archiveRestaurant(@PathVariable("key") String key, RedirectAttributes ra) {
+    public String archiveRestaurant(@PathVariable("key") String key, Authentication auth,
+                                    RedirectAttributes ra) {
         Restaurant r = restaurants.findByRestaurantKey(key)
                 .orElseThrow(() -> new NoSuchElementException("Restaurant not found: " + key));
         r.setStatus(RestaurantStatus.ARCHIVED);
+        r.setUpdatedBy(actor(auth));
         restaurants.save(r);
         ra.addFlashAttribute("successMessage", "Restaurant '" + key + "' archived");
         return "redirect:/admin/restaurants";
     }
 
     @PostMapping("/restaurants/{key}/activate")
-    public String activateRestaurant(@PathVariable("key") String key, RedirectAttributes ra) {
+    public String activateRestaurant(@PathVariable("key") String key, Authentication auth,
+                                     RedirectAttributes ra) {
         Restaurant r = restaurants.findByRestaurantKey(key)
                 .orElseThrow(() -> new NoSuchElementException("Restaurant not found: " + key));
         r.setStatus(RestaurantStatus.ACTIVE);
+        r.setUpdatedBy(actor(auth));
         restaurants.save(r);
         ra.addFlashAttribute("successMessage", "Restaurant '" + key + "' activated");
         return "redirect:/admin/restaurants";
+    }
+
+    private static String actor(Authentication auth) {
+        return auth == null ? null : auth.getName();
     }
 
     private void applyRestaurant(Restaurant r, String restaurantKey, String name,
@@ -347,6 +359,7 @@ public class AdminViewController {
                              @RequestParam(required = false) String sourceUrl,
                              @RequestParam(required = false) String validFrom,
                              @RequestParam(required = false) String validTo,
+                             Authentication auth,
                              RedirectAttributes ra, Model model) {
         try {
             if (menus.existsByMenuKey(menuKey)) {
@@ -359,6 +372,7 @@ public class AdminViewController {
             LocalDate to = parseDateOrNull(validTo, "valid_to");
             Menu m = new Menu();
             applyMenu(m, menuKey, restaurantId, name, menuType, status, sourceUrl, from, to);
+            m.setUpdatedBy(actor(auth));
             menus.save(m);
             ra.addFlashAttribute("successMessage", "Menu '" + m.getMenuKey() + "' created");
             return "redirect:/admin/menus";
@@ -383,6 +397,7 @@ public class AdminViewController {
                              @RequestParam(required = false) String sourceUrl,
                              @RequestParam(required = false) String validFrom,
                              @RequestParam(required = false) String validTo,
+                             Authentication auth,
                              RedirectAttributes ra, Model model) {
         Menu m = menus.findByMenuKey(key)
                 .orElseThrow(() -> new NoSuchElementException("Menu not found: " + key));
@@ -396,6 +411,7 @@ public class AdminViewController {
             if (status == MenuStatus.PUBLISHED && m.getPublishedAt() == null) {
                 m.setPublishedAt(Instant.now());
             }
+            m.setUpdatedBy(actor(auth));
             menus.save(m);
             ra.addFlashAttribute("successMessage", "Menu '" + m.getMenuKey() + "' updated");
             return "redirect:/admin/menus";
@@ -466,6 +482,7 @@ public class AdminViewController {
                                 @RequestParam(required = false) String description,
                                 @RequestParam(required = false) String weightText,
                                 @RequestParam(required = false) ProductStatus status,
+                                Authentication auth,
                                 RedirectAttributes ra) {
         if (products.existsByProductKey(productKey)) {
             throw new AdminConflictException("product_key already exists: " + productKey);
@@ -475,6 +492,7 @@ public class AdminViewController {
                 .getId();
         Product p = new Product();
         applyProduct(p, productKey, restaurantId, name, description, weightText, status);
+        p.setUpdatedBy(actor(auth));
         products.save(p);
         ra.addFlashAttribute("successMessage", "Product '" + p.getProductKey() + "' created");
         return "redirect:/admin/products";
@@ -487,6 +505,7 @@ public class AdminViewController {
                                 @RequestParam(required = false) String description,
                                 @RequestParam(required = false) String weightText,
                                 @RequestParam(required = false) ProductStatus status,
+                                Authentication auth,
                                 RedirectAttributes ra) {
         Product p = products.findByProductKey(key)
                 .orElseThrow(() -> new NoSuchElementException("Product not found: " + key));
@@ -494,6 +513,7 @@ public class AdminViewController {
                 .orElseThrow(() -> new NoSuchElementException("Unknown restaurant_key: " + restaurantKey))
                 .getId();
         applyProduct(p, key, restaurantId, name, description, weightText, status);
+        p.setUpdatedBy(actor(auth));
         products.save(p);
         ra.addFlashAttribute("successMessage", "Product '" + p.getProductKey() + "' updated");
         return "redirect:/admin/products";
@@ -535,6 +555,7 @@ public class AdminViewController {
                                  @RequestParam(required = false) String currency,
                                  @RequestParam(required = false) Boolean available,
                                  @RequestParam(required = false) Integer sortOrder,
+                                 Authentication auth,
                                  RedirectAttributes ra) {
         MenuItem mi = menuItems.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Menu item not found: " + id));
@@ -549,6 +570,7 @@ public class AdminViewController {
         mi.setCurrency(currency == null || currency.isBlank() ? "RON" : currency.toUpperCase());
         mi.setAvailable(available == null ? mi.isAvailable() : available);
         mi.setSortOrder(sortOrder == null ? mi.getSortOrder() : sortOrder);
+        mi.setUpdatedBy(actor(auth));
         menuItems.save(mi);
         ra.addFlashAttribute("successMessage", "Menu item updated");
         return "redirect:/admin/menu-items";

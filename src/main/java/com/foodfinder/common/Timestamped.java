@@ -20,6 +20,15 @@ public abstract class Timestamped {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    /**
+     * Best-effort audit trail: the principal name of whoever last wrote
+     * the row, or {@code null} when the row was inserted by a bulk path
+     * (CSV import) that does not record a per-row actor. Format is the
+     * same as Spring Security's {@code Authentication#getName()}.
+     */
+    @Column(name = "updated_by", length = 120)
+    private String updatedBy;
+
     @PrePersist
     void onCreate() {
         Instant now = Instant.now();
@@ -46,5 +55,13 @@ public abstract class Timestamped {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getUpdatedBy() {
+        return updatedBy;
+    }
+
+    public void setUpdatedBy(String updatedBy) {
+        this.updatedBy = updatedBy;
     }
 }

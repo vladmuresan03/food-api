@@ -8,6 +8,7 @@ import com.foodfinder.product.ProductRepository;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -41,7 +42,8 @@ public class AdminMenuItemController {
     }
 
     @PostMapping
-    public ResponseEntity<MenuItemView> create(@RequestBody @Valid MenuItemUpsert body) {
+    public ResponseEntity<MenuItemView> create(@RequestBody @Valid MenuItemUpsert body,
+                                               Authentication auth) {
         Long menuId = menus.findByMenuKey(body.menuKey())
                 .orElseThrow(() -> new NoSuchElementException("Unknown menu_key: " + body.menuKey())).getId();
         Long productId = products.findByProductKey(body.productKey())
@@ -58,12 +60,14 @@ public class AdminMenuItemController {
         }
         MenuItem mi = new MenuItem();
         apply(mi, body, menuId, productId, menuRestaurantId);
+        mi.setUpdatedBy(actor(auth));
         items.save(mi);
         return ResponseEntity.ok(MenuItemView.of(mi, menus, products));
     }
 
     @PutMapping("/{id}")
-    public MenuItemView update(@PathVariable Long id, @RequestBody @Valid MenuItemUpsert body) {
+    public MenuItemView update(@PathVariable Long id, @RequestBody @Valid MenuItemUpsert body,
+                               Authentication auth) {
         MenuItem mi = items.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Menu item not found: " + id));
         Long menuId = menus.findByMenuKey(body.menuKey())
@@ -82,8 +86,13 @@ public class AdminMenuItemController {
                     "menu_key and product_key belong to different restaurants");
         }
         apply(mi, body, menuId, productId, menuRestaurantId);
+        mi.setUpdatedBy(actor(auth));
         items.save(mi);
         return MenuItemView.of(mi, menus, products);
+    }
+
+    private static String actor(Authentication auth) {
+        return auth == null ? null : auth.getName();
     }
 
     @DeleteMapping("/{id}")

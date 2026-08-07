@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -39,7 +40,8 @@ public class AdminProductController {
     }
 
     @PostMapping
-    public ResponseEntity<ProductView> create(@RequestBody @Valid ProductUpsert body) {
+    public ResponseEntity<ProductView> create(@RequestBody @Valid ProductUpsert body,
+                                             Authentication auth) {
         if (products.existsByProductKey(body.productKey())) {
             throw new AdminConflictException("product_key already exists: " + body.productKey());
         }
@@ -48,6 +50,7 @@ public class AdminProductController {
                 .getId();
         Product p = new Product();
         apply(p, body, restaurantId);
+        p.setUpdatedBy(actor(auth));
         products.save(p);
         return ResponseEntity.ok(ProductView.of(p));
     }
@@ -58,22 +61,30 @@ public class AdminProductController {
     }
 
     @PutMapping("/{productKey}")
-    public ProductView update(@PathVariable String productKey, @RequestBody @Valid ProductUpsert body) {
+    public ProductView update(@PathVariable String productKey, @RequestBody @Valid ProductUpsert body,
+                             Authentication auth) {
         Product p = loadOrThrow(productKey);
         Long restaurantId = restaurants.findByRestaurantKey(body.restaurantKey())
                 .orElseThrow(() -> new NoSuchElementException("Unknown restaurant_key: " + body.restaurantKey()))
                 .getId();
         apply(p, body, restaurantId);
+        p.setUpdatedBy(actor(auth));
         products.save(p);
         return ProductView.of(p);
     }
 
     @PatchMapping("/{productKey}/status")
-    public ProductView updateStatus(@PathVariable String productKey, @RequestBody ProductStatusUpdate body) {
+    public ProductView updateStatus(@PathVariable String productKey, @RequestBody ProductStatusUpdate body,
+                                    Authentication auth) {
         Product p = loadOrThrow(productKey);
         p.setStatus(body.status());
+        p.setUpdatedBy(actor(auth));
         products.save(p);
         return ProductView.of(p);
+    }
+
+    private static String actor(Authentication auth) {
+        return auth == null ? null : auth.getName();
     }
 
     private Product loadOrThrow(String key) {

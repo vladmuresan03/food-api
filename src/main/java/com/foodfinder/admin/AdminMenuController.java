@@ -42,7 +42,8 @@ public class AdminMenuController {
     }
 
     @PostMapping
-    public ResponseEntity<MenuView> create(@RequestBody @Valid MenuUpsert body) {
+    public ResponseEntity<MenuView> create(@RequestBody @Valid MenuUpsert body,
+                                          org.springframework.security.core.Authentication auth) {
         if (menus.existsByMenuKey(body.menuKey())) {
             throw new AdminConflictException("menu_key already exists: " + body.menuKey());
         }
@@ -54,6 +55,7 @@ public class AdminMenuController {
         }
         Menu m = new Menu();
         apply(m, body, restaurantId);
+        m.setUpdatedBy(actor(auth));
         menus.save(m);
         return ResponseEntity.ok(MenuView.of(m));
     }
@@ -64,25 +66,33 @@ public class AdminMenuController {
     }
 
     @PutMapping("/{menuKey}")
-    public MenuView update(@PathVariable String menuKey, @RequestBody @Valid MenuUpsert body) {
+    public MenuView update(@PathVariable String menuKey, @RequestBody @Valid MenuUpsert body,
+                           org.springframework.security.core.Authentication auth) {
         Menu m = loadOrThrow(menuKey);
         Long restaurantId = restaurants.findByRestaurantKey(body.restaurantKey())
                 .orElseThrow(() -> new NoSuchElementException("Unknown restaurant_key: " + body.restaurantKey()))
                 .getId();
         apply(m, body, restaurantId);
+        m.setUpdatedBy(actor(auth));
         menus.save(m);
         return MenuView.of(m);
     }
 
     @PatchMapping("/{menuKey}/status")
-    public MenuView updateStatus(@PathVariable String menuKey, @RequestBody MenuStatusUpdate body) {
+    public MenuView updateStatus(@PathVariable String menuKey, @RequestBody MenuStatusUpdate body,
+                                 org.springframework.security.core.Authentication auth) {
         Menu m = loadOrThrow(menuKey);
         m.setStatus(body.status());
         if (body.status() == MenuStatus.PUBLISHED && m.getPublishedAt() == null) {
             m.setPublishedAt(Instant.now());
         }
+        m.setUpdatedBy(actor(auth));
         menus.save(m);
         return MenuView.of(m);
+    }
+
+    private static String actor(org.springframework.security.core.Authentication auth) {
+        return auth == null ? null : auth.getName();
     }
 
     private Menu loadOrThrow(String key) {
