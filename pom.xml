@@ -13,7 +13,7 @@
 
   <groupId>com.foodfinder</groupId>
   <artifactId>foodfinder-api</artifactId>
-  <version>0.1.8-SNAPSHOT</version>
+  <version>0.1.9-SNAPSHOT</version>
   <name>foodfinder-api</name>
   <description>FoodFinder minimalist catalog API with table-first admin</description>
 
