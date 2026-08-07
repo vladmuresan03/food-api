@@ -41,17 +41,22 @@ public class CsvController {
     private final RestaurantCsv restaurants;
     private final MenuCsv menus;
     private final ProductCsv products;
+    private final NutritionCsv nutrition;
+    private final IngredientsCsv ingredients;
     private final MenuItemCsv menuItems;
     private final PhotoCsv photos;
     private final MenuAssetCsv menuAssets;
     private final CsvImportLogRepository importLog;
 
     public CsvController(RestaurantCsv restaurants, MenuCsv menus, ProductCsv products,
+                         NutritionCsv nutrition, IngredientsCsv ingredients,
                          MenuItemCsv menuItems, PhotoCsv photos, MenuAssetCsv menuAssets,
                          CsvImportLogRepository importLog) {
         this.restaurants = restaurants;
         this.menus = menus;
         this.products = products;
+        this.nutrition = nutrition;
+        this.ingredients = ingredients;
         this.menuItems = menuItems;
         this.photos = photos;
         this.menuAssets = menuAssets;
@@ -73,6 +78,16 @@ public class CsvController {
     @GetMapping(value = "/products", produces = "text/csv")
     public ResponseEntity<String> exportProducts() throws IOException {
         return csvResponse("products.csv", products::write);
+    }
+
+    @GetMapping(value = "/nutrition", produces = "text/csv")
+    public ResponseEntity<String> exportNutrition() throws IOException {
+        return csvResponse("nutrition.csv", nutrition::write);
+    }
+
+    @GetMapping(value = "/ingredients", produces = "text/csv")
+    public ResponseEntity<String> exportIngredients() throws IOException {
+        return csvResponse("ingredients.csv", ingredients::write);
     }
 
     @GetMapping(value = "/menu-items", produces = "text/csv")
@@ -116,6 +131,22 @@ public class CsvController {
         return doImport("products", file, dryRun, auth, products::parse);
     }
 
+    @PostMapping(value = "/nutrition", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ImportApiResponse> importNutrition(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "dryRun", defaultValue = "false") boolean dryRun,
+            Authentication auth) throws IOException {
+        return doImport("nutrition", file, dryRun, auth, nutrition::parse);
+    }
+
+    @PostMapping(value = "/ingredients", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ImportApiResponse> importIngredients(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "dryRun", defaultValue = "false") boolean dryRun,
+            Authentication auth) throws IOException {
+        return doImport("ingredients", file, dryRun, auth, ingredients::parse);
+    }
+
     @PostMapping(value = "/menu-items", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ImportApiResponse> importMenuItems(
             @RequestParam("file") MultipartFile file,
@@ -149,7 +180,7 @@ public class CsvController {
     public ResponseEntity<ImportApiResponse> importUnknown(Authentication auth) {
         return ResponseEntity.status(400).body(ImportApiResponse.error(
                 "Unknown CSV resource; valid slugs: restaurants, menus, products, " +
-                        "menu-items, photos, menu-assets"));
+                        "nutrition, ingredients, menu-items, photos, menu-assets"));
     }
 
     // ------------------------------------------------------------------ helpers
