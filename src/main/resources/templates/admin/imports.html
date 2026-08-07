@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/_layout :: head('Import history')}"></head>
+<body>
+<header th:replace="~{admin/_layout :: topbar}"></header>
+<nav th:replace="~{admin/_layout :: nav('imports')}"></nav>
+<main>
+    <h2>Import history</h2>
+    <p class="muted">Last 100 CSV imports. Each row records who ran it, which resource, the file, the outcome, and a count breakdown.</p>
+
+    <div th:if="${rows.empty}" class="empty">
+        <p><strong>No imports yet.</strong></p>
+    </div>
+
+    <table th:unless="${rows.empty}">
+        <thead>
+        <tr>
+            <th>When</th><th>Resource</th><th>File</th><th>Actor</th>
+            <th>Mode</th><th>Total</th><th>Inserted</th><th>Updated</th><th>Errors</th>
+            <th>Status</th><th>Duration</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="r : ${rows}">
+            <td class="muted" th:text="${#temporals.format(r.startedAt, 'yyyy-MM-dd HH:mm:ss')}"></td>
+            <td><code th:text="${r.slug}"></code></td>
+            <td class="muted" th:text="${r.filename} ?: '—'"></td>
+            <td th:text="${r.actor}"></td>
+            <td><span th:text="${r.dryRun} ? 'dry-run' : 'commit'"></span></td>
+            <td th:text="${r.totalRows}"></td>
+            <td th:text="${r.insertedRows}"></td>
+            <td th:text="${r.updatedRows}"></td>
+            <td>
+                <span th:if="${r.errorCount > 0}" style="color:#dc2626;font-weight:600;" th:text="${r.errorCount}"></span>
+                <span th:unless="${r.errorCount > 0}" th:text="${r.errorCount}"></span>
+            </td>
+            <td>
+                <span th:if="${r.status.name() == 'OK'}" class="pill pill-active" th:text="${r.status}"></span>
+                <span th:unless="${r.status.name() == 'OK'}" class="pill pill-archived" th:text="${r.status}"></span>
+            </td>
+            <td class="muted" th:text="${r.durationMs() + ' ms'}"></td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+</body>
+</html>

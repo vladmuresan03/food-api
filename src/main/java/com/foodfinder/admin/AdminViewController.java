@@ -20,6 +20,8 @@ import com.foodfinder.product.ProductStatus;
 import com.foodfinder.restaurant.Restaurant;
 import com.foodfinder.restaurant.RestaurantRepository;
 import com.foodfinder.restaurant.RestaurantStatus;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -65,12 +67,16 @@ public class AdminViewController {
     private final MenuRepository menus;
     private final ProductRepository products;
     private final MenuItemRepository menuItems;
+    private final CsvImportLogRepository importLog;
+    private final BundleImporter bundleImporter;
+    private final CsvPreviewService previewService;
 
     public AdminViewController(AdminViewService views, RestaurantCsv restaurantCsv, MenuCsv menuCsv,
                                ProductCsv productCsv, MenuItemCsv menuItemCsv, PhotoCsv photoCsv,
                                MenuAssetCsv menuAssetCsv, RestaurantRepository restaurants,
                                MenuRepository menus, ProductRepository products,
-                               MenuItemRepository menuItems) {
+                               MenuItemRepository menuItems, CsvImportLogRepository importLog,
+                               BundleImporter bundleImporter, CsvPreviewService previewService) {
         this.views = views;
         this.restaurantCsv = restaurantCsv;
         this.menuCsv = menuCsv;
@@ -82,6 +88,9 @@ public class AdminViewController {
         this.menus = menus;
         this.products = products;
         this.menuItems = menuItems;
+        this.importLog = importLog;
+        this.bundleImporter = bundleImporter;
+        this.previewService = previewService;
     }
 
     // ------------------------------------------------------------------ pages
@@ -560,15 +569,72 @@ public class AdminViewController {
     public String importCsv(@PathVariable String slug,
                             @RequestParam("file") MultipartFile file,
                             @RequestParam(value = "dryRun", defaultValue = "false") boolean dryRun,
+                            @RequestParam(value = "preview", defaultValue = "false") boolean preview,
+                            Authentication auth,
                             Model model) throws IOException {
-        CsvImportReport report = runImport(slug, file, dryRun);
-        model.addAttribute("report", report);
+        if (preview) {
+            CsvPreviewService.Preview p = previewService.previewFromBytes(file.getBytes());
+            model.addAttribute("preview", p);
+            model.addAttribute("previewSlug", slug);
+            model.addAttribute("previewFilename", file.getOriginalFilename());
+        } else {
+            CsvImportReport report = runAndLog(slug, file.getOriginalFilename(), auth, dryRun, () -> {
+                try (Reader reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8)) {
+                    return resolveImporter(slug).parse(reader, dryRun);
+                }
+            });
+            model.addAttribute("report", report);
+        }
         model.addAttribute("resources", views.csvResources());
         return "admin/csv";
     }
 
-    private CsvImportReport runImport(String slug, MultipartFile file, boolean dryRun) throws IOException {
-        ImportFn fn = switch (slug) {
+    @GetMapping("/imports")
+    public String imports(Model model) {
+        model.addAttribute("rows", importLog.findAllByOrderByStartedAtDesc(PageRequest.of(0, 100)));
+        return "admin/imports";
+    }
+
+    // ------------------------------------------------------------------ bundle import
+
+    @GetMapping("/csv/bundle")
+    public String bundleForm(Model model) {
+        return "admin/bundle";
+    }
+
+    @PostMapping("/csv/bundle")
+    public String importBundle(@RequestParam("file") MultipartFile file,
+                               @RequestParam(value = "dryRun", defaultValue = "false") boolean dryRun,
+                               Authentication auth,
+                               Model model) throws IOException {
+        BundleImportResult result = bundleImporter.importBundle(
+                file.getInputStream(), file.getOriginalFilename(), dryRun, auth);
+        model.addAttribute("result", result);
+        return "admin/bundle";
+    }
+
+    private CsvImportReport runAndLog(String slug, String filename, Authentication auth,
+                                      boolean dryRun, CsvImporter fn) throws IOException {
+        CsvImportLog log = CsvImportLog.start(slug, filename,
+                auth == null ? "anonymous" : auth.getName(), dryRun);
+        try {
+            CsvImportReport report = fn.run();
+            log.finishOk(report.totalRows(), report.inserted(), report.updated(),
+                    report.errors().size());
+            importLog.save(log);
+            return report;
+        } catch (RuntimeException | IOException e) {
+            log.finishFailed(e.getMessage());
+            importLog.save(log);
+            if (e instanceof IOException ioe) {
+                throw ioe;
+            }
+            throw e;
+        }
+    }
+
+    private ImportFn resolveImporter(String slug) {
+        return switch (slug) {
             case "restaurants" -> restaurantCsv::parse;
             case "menus" -> menuCsv::parse;
             case "products" -> productCsv::parse;
@@ -577,14 +643,16 @@ public class AdminViewController {
             case "menu-assets" -> menuAssetCsv::parse;
             default -> throw new IllegalArgumentException("Unknown CSV resource: " + slug);
         };
-        try (Reader reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8)) {
-            return fn.parse(reader, dryRun);
-        }
     }
 
     @FunctionalInterface
     private interface ImportFn {
         CsvImportReport parse(Reader reader, boolean dryRun) throws IOException;
+    }
+
+    @FunctionalInterface
+    private interface CsvImporter {
+        CsvImportReport run() throws IOException;
     }
 
     // ------------------------------------------------------------------ helpers

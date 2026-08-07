@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/_layout :: head('Bundle import')}"></head>
+<body>
+<header th:replace="~{admin/_layout :: topbar}"></header>
+<nav th:replace="~{admin/_layout :: nav('csv')}"></nav>
+<main>
+    <h2>Bundle import</h2>
+    <p class="muted">Upload a <code>.zip</code> containing one CSV per resource.
+        Files are imported in dependency order (restaurants → menus → products →
+        menu-items → photos → menu-assets). On any failure inside a file, the
+        remaining resources are skipped.</p>
+    <p class="muted">Expected entry names: <code>restaurants.csv</code>,
+        <code>menus.csv</code>, <code>products.csv</code>,
+        <code>menu_items.csv</code> (or <code>menu-items.csv</code>),
+        <code>photos.csv</code>, <code>menu_assets.csv</code> (or
+        <code>menu-assets.csv</code>). Files can also live in a subdirectory
+        of the zip.</p>
+
+    <form th:action="@{/admin/csv/bundle}" method="post" enctype="multipart/form-data" class="toolbar">
+        <input type="file" name="file" accept=".zip" required="required"/>
+        <label><input type="checkbox" name="dryRun" value="true" checked="checked"/> dry-run</label>
+        <button type="submit">Upload bundle</button>
+    </form>
+
+    <div th:if="${result != null}" style="margin-top: 1.5rem;">
+        <div th:if="${result.totalErrors() == 0}" class="success">
+            <h3>OK</h3>
+            <p th:text="'Bundle ' + ${result.bundleFilename} + ' processed: '
+                + ${result.totalRows} + ' rows scanned, '
+                + ${result.totalInserted} + ' inserted, '
+                + ${result.totalUpdated} + ' updated, 0 errors.'"></p>
+        </div>
+        <div th:unless="${result.totalErrors() == 0}" class="errors">
+            <h3>
+                <span th:text="${result.totalErrors} + ' row error(s) found across bundle'"></span>
+            </h3>
+            <p>Some resources were imported; the first one with errors aborted the chain. See the table below.</p>
+        </div>
+
+        <h3>Per-resource breakdown</h3>
+        <table>
+            <thead>
+            <tr><th>Resource</th><th>File</th><th>Status</th><th>Total</th><th>Inserted</th><th>Updated</th><th>Errors</th></tr>
+            </thead>
+            <tbody>
+            <tr th:each="e : ${result.entries()}">
+                <td><code th:text="${e.slug}"></code></td>
+                <td class="muted" th:text="${e.filename}"></td>
+                <td>
+                    <span th:if="${e.skipped}" class="pill pill-archived">skipped</span>
+                    <span th:unless="${e.skipped}">
+                        <span th:if="${e.report.errors().isEmpty()}" class="pill pill-active">ok</span>
+                        <span th:unless="${e.report.errors().isEmpty()}" class="pill pill-archived">errors</span>
+                    </span>
+                </td>
+                <td th:text="${e.report.totalRows()}"></td>
+                <td th:text="${e.report.inserted()}"></td>
+                <td th:text="${e.report.updated()}"></td>
+                <td>
+                    <span th:if="${e.report.errors().isEmpty()}" th:text="'0'"></span>
+                    <span th:unless="${e.report.errors().isEmpty()}"
+                          style="color:#dc2626;font-weight:600;"
+                          th:text="${e.report.errors().size()}"></span>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+        <div th:each="e : ${result.entries()}"
+             th:if="${!e.report.errors().isEmpty()}"
+             style="margin-top: 1rem; padding: 0.75rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: 4px;">
+            <h4 style="margin: 0 0 0.5rem;">
+                <code th:text="${e.slug}"></code> — first 10 errors
+            </h4>
+            <table>
+                <thead><tr><th>Row</th><th>Field</th><th>Code</th><th>Message</th></tr></thead>
+                <tbody>
+                <tr th:each="err : ${e.report.errors().size() > 10 ? e.report.errors().subList(0, 10) : e.report.errors()}">
+                    <td th:text="${err.row}"></td>
+                    <td><code th:text="${err.field}"></code></td>
+                    <td><code th:text="${err.code}"></code></td>
+                    <td th:text="${err.message}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+</body>
+</html>

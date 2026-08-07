@@ -8,6 +8,20 @@
     <h2>CSV import / export</h2>
     <p class="muted">Run imports in dry-run mode to preview row-level errors before writing. Strict mode rolls back all writes if any row is invalid.</p>
 
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;padding:0.75rem 1rem;border-radius:4px;margin-bottom:1rem;">
+        <strong>Import order matters.</strong> Resources reference each other via foreign keys.
+        Import in this order to avoid <code>UNKNOWN_*</code> errors:
+        <ol style="margin: 0.5rem 0 0 1.5rem; padding: 0;">
+            <li><code>restaurants</code> &#8212; no dependencies</li>
+            <li><code>menus</code> &#8212; requires <code>restaurant_key</code></li>
+            <li><code>products</code> &#8212; requires <code>restaurant_key</code></li>
+            <li><code>menu-items</code> &#8212; requires <code>menu_key</code> + <code>product_key</code></li>
+            <li><code>photos</code> &#8212; requires <code>restaurant_key</code>, optional <code>product_key</code></li>
+            <li><code>menu-assets</code> &#8212; requires <code>menu_key</code></li>
+        </ol>
+        <div class="muted" style="margin-top:0.5rem;">Tip: use <a th:href="@{/admin/csv/bundle}">Bundle import</a> to run all six in one shot.</div>
+    </div>
+
     <div th:if="${errorMessage != null}" class="errors">
         <h3>Import failed</h3>
         <p th:text="${errorMessage}"></p>
@@ -51,12 +65,44 @@
                 <form th:action="@{'/admin/csv/' + ${r.slug}}" method="post" enctype="multipart/form-data" class="toolbar">
                     <input type="file" name="file" accept=".csv" required="required"/>
                     <label><input type="checkbox" name="dryRun" value="true" checked="checked"/> dry-run</label>
+                    <button type="submit" name="preview" value="true">Preview</button>
                     <button type="submit">Upload</button>
                 </form>
             </td>
         </tr>
         </tbody>
     </table>
+
+    <div th:if="${preview != null}" style="margin-top: 2rem;">
+        <h3>
+            Preview of
+            <code th:text="${previewFilename}"></code>
+            for resource <code th:text="${previewSlug}"></code>
+        </h3>
+        <div th:if="${!preview.wellFormed()}" class="errors">
+            <p>File is not well-formed CSV: <span th:text="${preview.parseError()}"></span></p>
+        </div>
+        <div th:if="${preview.wellFormed()}">
+            <p class="muted">
+                File has <span th:text="${preview.totalRows()}"></span> data row(s).
+                Showing the first
+                <span th:text="${preview.rows().size()}"></span>.
+                <strong>Nothing was written</strong> by this preview.
+            </p>
+            <table>
+                <thead>
+                <tr>
+                    <th th:each="h : ${preview.headers()}" th:text="${h}"></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="r : ${preview.rows()}">
+                    <td th:each="cell : ${r}" th:text="${cell}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
 </main>
 </body>
 </html>
