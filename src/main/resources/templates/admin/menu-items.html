@@ -18,7 +18,8 @@
             <input name="section" th:value="${section}" placeholder="section"/>
             <button type="submit">Filter</button>
         </form>
-        <a class="secondary" th:href="@{/admin/api/csv/menu-items}" style="margin-left:auto;">Download CSV</a>
+        <a th:href="@{/admin/menu-items/new}" style="margin-left:auto;">+ New menu item</a>
+        <a class="secondary" th:href="@{/admin/api/csv/menu-items}">Download CSV</a>
     </div>
 
     <div th:if="${rows.empty}" class="empty"><p><strong>No menu items yet.</strong></p></div>

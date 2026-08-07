@@ -588,12 +588,87 @@ public class AdminViewController {
 
     // ------------------------------------------------------------------ menu-item CRUD
 
+    @GetMapping("/menu-items/new")
+    public String newMenuItem(@RequestParam(required = false) String menuKey, Model model) {
+        model.addAttribute("mode", "new");
+        model.addAttribute("menus", menus.findAll().stream()
+                .sorted((a, b) -> a.getName().compareToIgnoreCase(b.getName()))
+                .toList());
+        model.addAttribute("products", products.findAll().stream()
+                .sorted((a, b) -> a.getName().compareToIgnoreCase(b.getName()))
+                .toList());
+        model.addAttribute("prefillMenuKey", menuKey == null ? "" : menuKey);
+        return "admin/menu-item-form";
+    }
+
     @GetMapping("/menu-items/{id}/edit")
     public String editMenuItem(@PathVariable("id") Long id, Model model) {
         MenuItem mi = menuItems.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Menu item not found: " + id));
         model.addAttribute("mi", mi);
         return "admin/menu-item-form";
+    }
+
+    @PostMapping("/menu-items")
+    public String createMenuItem(@RequestParam String menuKey,
+                                 @RequestParam String productKey,
+                                 @RequestParam(required = false) String sectionName,
+                                 @RequestParam(required = false) BigDecimal price,
+                                 @RequestParam(required = false) String currency,
+                                 @RequestParam(required = false) Boolean available,
+                                 @RequestParam(required = false) Integer sortOrder,
+                                 Authentication auth,
+                                 RedirectAttributes ra, Model model) {
+        try {
+            if (menuKey == null || menuKey.isBlank()) {
+                throw new IllegalArgumentException("menu_key is required");
+            }
+            if (productKey == null || productKey.isBlank()) {
+                throw new IllegalArgumentException("product_key is required");
+            }
+            if (price != null && price.signum() < 0) {
+                throw new IllegalArgumentException("price must not be negative");
+            }
+            Long menuId = menus.findByMenuKey(menuKey)
+                    .orElseThrow(() -> new NoSuchElementException("Unknown menu_key: " + menuKey)).getId();
+            Long productId = products.findByProductKey(productKey)
+                    .orElseThrow(() -> new NoSuchElementException("Unknown product_key: " + productKey)).getId();
+            Long menuRestaurantId = menus.findById(menuId).orElseThrow().getRestaurantId();
+            Long productRestaurantId = products.findById(productId).orElseThrow().getRestaurantId();
+            if (!menuRestaurantId.equals(productRestaurantId)) {
+                throw new AdminConflictException(
+                        "menu_key and product_key belong to different restaurants");
+            }
+            if (menuItems.existsByMenuIdAndProductId(menuId, productId)) {
+                throw new AdminConflictException(
+                        "menu_item for (" + menuKey + "," + productKey + ") already exists");
+            }
+            MenuItem mi = new MenuItem();
+            mi.setMenuId(menuId);
+            mi.setProductId(productId);
+            mi.setRestaurantId(menuRestaurantId);
+            mi.setSectionName(sectionName == null || sectionName.isBlank() ? "Altele" : sectionName);
+            mi.setPrice(price);
+            mi.setCurrency(currency == null || currency.isBlank() ? "RON" : currency.toUpperCase());
+            mi.setAvailable(available == null ? true : available);
+            mi.setSortOrder(sortOrder == null ? 0 : sortOrder);
+            mi.setUpdatedBy(actor(auth));
+            menuItems.save(mi);
+            ra.addFlashAttribute("successMessage",
+                    "Menu item added (" + menuKey + " x " + productKey + ")");
+            return "redirect:/admin/menu-items";
+        } catch (RuntimeException e) {
+            model.addAttribute("mode", "new");
+            model.addAttribute("menus", menus.findAll().stream()
+                    .sorted((a, b) -> a.getName().compareToIgnoreCase(b.getName()))
+                    .toList());
+            model.addAttribute("products", products.findAll().stream()
+                    .sorted((a, b) -> a.getName().compareToIgnoreCase(b.getName()))
+                    .toList());
+            model.addAttribute("prefillMenuKey", menuKey == null ? "" : menuKey);
+            model.addAttribute("errorMessage", e.getMessage());
+            return "admin/menu-item-form";
+        }
     }
 
     @PostMapping("/menu-items/{id}")

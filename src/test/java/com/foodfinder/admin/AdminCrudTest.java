@@ -270,6 +270,166 @@ class AdminCrudTest {
                 .isEqualTo(ProductStatus.ARCHIVED);
     }
 
+    // ------------------------------------------------------------------ menu-item create (form)
+
+    @Test
+    void newMenuItemFormRendersWithDropdowns() throws Exception {
+        seedRestaurant();
+        menuCsv.parse(new StringReader("""
+                menu_key,restaurant_key,name,menu_type,status
+                ni-menu,crud-r,NI Menu,PERMANENT,DRAFT
+                """), false);
+        productCsv.parse(new StringReader("""
+                product_key,restaurant_key,name,status
+                ni-prod,crud-r,NI Prod,ACTIVE
+                """), false);
+
+        mvc.perform(get("/admin/menu-items/new")
+                        .with(httpBasic("test-admin", "test-password")))
+                .andExpect(status().isOk())
+                .andExpect(xpath("//select[@id='menuKey']").exists())
+                .andExpect(xpath("//select[@id='productKey']").exists())
+                .andExpect(xpath("//option[@value='ni-menu']").exists())
+                .andExpect(xpath("//option[@value='ni-prod']").exists());
+    }
+
+    @Test
+    void createMenuItemHappyPath() throws Exception {
+        seedRestaurant();
+        menuCsv.parse(new StringReader("""
+                menu_key,restaurant_key,name,menu_type,status
+                cmi-menu,crud-r,CMI,PERMANENT,DRAFT
+                """), false);
+        productCsv.parse(new StringReader("""
+                product_key,restaurant_key,name,status
+                cmi-prod,crud-r,CMI Prod,ACTIVE
+                """), false);
+
+        mvc.perform(post("/admin/menu-items")
+                        .param("menuKey", "cmi-menu")
+                        .param("productKey", "cmi-prod")
+                        .param("sectionName", "Starters")
+                        .param("price", "15.00")
+                        .param("currency", "RON")
+                        .param("available", "true")
+                        .param("sortOrder", "3")
+                        .with(httpBasic("test-admin", "test-password"))
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/menu-items"))
+                .andExpect(flash().attributeExists("successMessage"));
+
+        Long menuId = menus.findByMenuKey("cmi-menu").orElseThrow().getId();
+        Long productId = products.findByProductKey("cmi-prod").orElseThrow().getId();
+        MenuItem mi = menuItems.findByMenuIdAndProductId(menuId, productId).orElseThrow();
+        assertThat(mi.getSectionName()).isEqualTo("Starters");
+        assertThat(mi.getPrice()).isEqualByComparingTo("15.00");
+        assertThat(mi.isAvailable()).isTrue();
+        assertThat(mi.getSortOrder()).isEqualTo(3);
+        assertThat(mi.getUpdatedBy()).isEqualTo("test-admin");
+    }
+
+    @Test
+    void createMenuItemRejectsCrossRestaurant() throws Exception {
+        seedRestaurant();
+        // Second restaurant
+        restaurantCsv.parse(new StringReader("""
+                restaurant_key,name,city,status
+                other-r,Other,Cluj-Napoca,ACTIVE
+                """), false);
+        menuCsv.parse(new StringReader("""
+                menu_key,restaurant_key,name,menu_type,status
+                x-menu,crud-r,X Menu,PERMANENT,DRAFT
+                """), false);
+        productCsv.parse(new StringReader("""
+                product_key,restaurant_key,name,status
+                x-prod,other-r,X Prod,ACTIVE
+                """), false);
+
+        mvc.perform(post("/admin/menu-items")
+                        .param("menuKey", "x-menu")
+                        .param("productKey", "x-prod")
+                        .param("sectionName", "X")
+                        .with(httpBasic("test-admin", "test-password"))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(xpath("//div[@class='errors']").exists())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("different restaurants")));
+    }
+
+    @Test
+    void createMenuItemRejectsDuplicate() throws Exception {
+        seedRestaurant();
+        menuCsv.parse(new StringReader("""
+                menu_key,restaurant_key,name,menu_type,status
+                d-menu,crud-r,D,PERMANENT,DRAFT
+                """), false);
+        productCsv.parse(new StringReader("""
+                product_key,restaurant_key,name,status
+                d-prod,crud-r,D Prod,ACTIVE
+                """), false);
+        menuItemCsv.parse(new StringReader("""
+                menu_key,product_key,section_name,price,currency,available,sort_order
+                d-menu,d-prod,Starters,10.00,RON,true,0
+                """), false);
+
+        mvc.perform(post("/admin/menu-items")
+                        .param("menuKey", "d-menu")
+                        .param("productKey", "d-prod")
+                        .param("sectionName", "Starters")
+                        .with(httpBasic("test-admin", "test-password"))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(xpath("//div[@class='errors']").exists())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("already exists")));
+    }
+
+    @Test
+    void createMenuItemRejectsUnknownMenu() throws Exception {
+        seedRestaurant();
+        productCsv.parse(new StringReader("""
+                product_key,restaurant_key,name,status
+                um-prod,crud-r,UM Prod,ACTIVE
+                """), false);
+
+        mvc.perform(post("/admin/menu-items")
+                        .param("menuKey", "nope-menu")
+                        .param("productKey", "um-prod")
+                        .param("sectionName", "X")
+                        .with(httpBasic("test-admin", "test-password"))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(xpath("//div[@class='errors']").exists())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Unknown menu_key")));
+    }
+
+    @Test
+    void createMenuItemDefaultsCurrencyToRon() throws Exception {
+        seedRestaurant();
+        menuCsv.parse(new StringReader("""
+                menu_key,restaurant_key,name,menu_type,status
+                dc-menu,crud-r,DC,PERMANENT,DRAFT
+                """), false);
+        productCsv.parse(new StringReader("""
+                product_key,restaurant_key,name,status
+                dc-prod,crud-r,DC Prod,ACTIVE
+                """), false);
+
+        mvc.perform(post("/admin/menu-items")
+                        .param("menuKey", "dc-menu")
+                        .param("productKey", "dc-prod")
+                        .param("sectionName", "S")
+                        // no currency
+                        .with(httpBasic("test-admin", "test-password"))
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection());
+
+        Long menuId = menus.findByMenuKey("dc-menu").orElseThrow().getId();
+        Long productId = products.findByProductKey("dc-prod").orElseThrow().getId();
+        MenuItem mi = menuItems.findByMenuIdAndProductId(menuId, productId).orElseThrow();
+        assertThat(mi.getCurrency()).isEqualTo("RON");
+    }
+
     // ------------------------------------------------------------------ menu-item CRUD
 
     @Test

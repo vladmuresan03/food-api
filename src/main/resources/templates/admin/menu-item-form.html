@@ -1,35 +1,67 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{admin/_layout :: head('Edit menu item #' + ${mi.id})}"></head>
+<head th:replace="~{admin/_layout :: head(${mode == 'new'} ? 'New menu item' : 'Edit menu item #' + ${mi.id})}"></head>
 <body>
 <header th:replace="~{admin/_layout :: topbar}"></header>
 <nav th:replace="~{admin/_layout :: nav('menu-items')}"></nav>
 <main>
-    <h2>Edit menu item</h2>
-    <p class="muted">Menu items are added via <a th:href="@{/admin/csv}">CSV import</a>.
-       Use this form to adjust section, price, availability, and order after creation.</p>
+    <h2 th:text="${mode == 'new'} ? 'New menu item' : 'Edit menu item'"></h2>
+    <p class="muted" th:if="${mode == 'new'}">
+        Pick a menu and a product from the same restaurant, then set the
+        section, price, and availability. Use CSV import for bulk loads.
+    </p>
+    <p class="muted" th:unless="${mode == 'new'}">
+        Menu items are added via <a th:href="@{/admin/csv}">CSV import</a> or the
+        form below. Use this form to adjust section, price, availability,
+        and order after creation.
+    </p>
 
     <div th:if="${errorMessage != null}" class="errors">
         <h3>Validation error</h3>
         <p th:text="${errorMessage}"></p>
     </div>
 
-    <form th:action="@{'/admin/menu-items/' + ${mi.id}}" method="post">
+    <form th:action="${mode == 'new'} ? @{/admin/menu-items} : @{'/admin/menu-items/' + ${mi.id}}"
+          method="post">
         <table style="max-width: 720px;">
             <tbody>
-            <tr>
+            <tr th:if="${mode == 'edit'}">
                 <td>menu</td>
                 <td><code th:text="${mi.menuId}"></code></td>
             </tr>
-            <tr>
+            <tr th:if="${mode == 'edit'}">
                 <td>product</td>
                 <td><code th:text="${mi.productId}"></code></td>
+            </tr>
+            <tr th:if="${mode == 'new'}">
+                <td><label for="menuKey">menu_key</label></td>
+                <td>
+                    <select id="menuKey" name="menuKey" required="required" style="padding:0.4rem;min-width:320px;">
+                        <option value="">-- select menu --</option>
+                        <option th:each="m : ${menus}"
+                                th:value="${m.menuKey}"
+                                th:selected="${m.menuKey == prefillMenuKey}"
+                                th:text="${m.name + ' (' + m.menuKey + ')'}"></option>
+                    </select>
+                </td>
+            </tr>
+            <tr th:if="${mode == 'new'}">
+                <td><label for="productKey">product_key</label></td>
+                <td>
+                    <select id="productKey" name="productKey" required="required" style="padding:0.4rem;min-width:320px;">
+                        <option value="">-- select product --</option>
+                        <option th:each="p : ${products}"
+                                th:value="${p.productKey}"
+                                th:text="${p.name + ' (' + p.productKey + ')'}"></option>
+                    </select>
+                    <div class="muted">must belong to the same restaurant as the selected menu</div>
+                </td>
             </tr>
             <tr>
                 <td><label for="sectionName">section_name</label></td>
                 <td>
                     <input id="sectionName" name="sectionName" required="required"
-                           th:value="${mi.sectionName}"
+                           th:value="${mode == 'new'} ? 'Altele' : ${mi.sectionName}"
                            style="width: 100%; padding: 0.4rem;"/>
                 </td>
             </tr>
@@ -37,7 +69,7 @@
                 <td><label for="price">price</label></td>
                 <td>
                     <input id="price" name="price" type="number" step="0.01" min="0"
-                           th:value="${mi.price}"
+                           th:value="${mode == 'new'} ? '' : ${mi.price}"
                            style="width: 100%; padding: 0.4rem;"/>
                 </td>
             </tr>
@@ -45,7 +77,7 @@
                 <td><label for="currency">currency</label></td>
                 <td>
                     <input id="currency" name="currency" maxlength="3"
-                           th:value="${mi.currency}"
+                           th:value="${mode == 'new'} ? 'RON' : ${mi.currency}"
                            style="padding: 0.4rem; width: 80px;"/>
                 </td>
             </tr>
@@ -53,11 +85,17 @@
                 <td><label for="sortOrder">sort_order</label></td>
                 <td>
                     <input id="sortOrder" name="sortOrder" type="number" step="1"
-                           th:value="${mi.sortOrder}"
+                           th:value="${mode == 'new'} ? '0' : ${mi.sortOrder}"
                            style="padding: 0.4rem; width: 100px;"/>
                 </td>
             </tr>
-            <tr>
+            <tr th:if="${mode == 'new'}">
+                <td><label for="available">available</label></td>
+                <td>
+                    <input id="available" name="available" type="checkbox" value="true" checked="checked"/>
+                </td>
+            </tr>
+            <tr th:unless="${mode == 'new'}">
                 <td><label for="available">available</label></td>
                 <td>
                     <input id="available" name="available" type="checkbox" value="true"
