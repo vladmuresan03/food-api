@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/_layout :: head(${mode == 'new'} ? 'New restaurant' : 'Edit restaurant')}"></head>
+<body>
+<header th:replace="~{admin/_layout :: topbar}"></header>
+<nav th:replace="~{admin/_layout :: nav('restaurants')}"></nav>
+<main>
+    <h2 th:text="${mode == 'new'} ? 'New restaurant' : 'Edit restaurant: ' + ${r.restaurantKey}"></h2>
+
+    <div th:if="${errorMessage != null}" class="errors">
+        <h3>Validation error</h3>
+        <p th:text="${errorMessage}"></p>
+    </div>
+
+    <form th:action="${mode == 'new'} ? @{/admin/restaurants} : @{'/admin/restaurants/' + ${r.restaurantKey}}"
+          method="post">
+        <table style="max-width: 720px;">
+            <tbody>
+            <tr>
+                <td><label for="restaurantKey">restaurant_key</label></td>
+                <td>
+                    <input id="restaurantKey" name="restaurantKey" required="required"
+                           pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+                           th:value="${mode == 'new'}
+                               ? (${form?.restaurantKey} ?: '')
+                               : ${r.restaurantKey}"
+                           th:readonly="${mode == 'edit'}"
+                           style="width: 100%; padding: 0.4rem;"/>
+                    <div class="muted" th:if="${mode == 'edit'}">slug is immutable after create</div>
+                </td>
+            </tr>
+            <tr>
+                <td><label for="name">name</label></td>
+                <td>
+                    <input id="name" name="name" required="required"
+                           th:value="${mode == 'new'}
+                               ? (${form?.name} ?: '')
+                               : ${r.name}"
+                           style="width: 100%; padding: 0.4rem;"/>
+                </td>
+            </tr>
+            <tr>
+                <td><label for="websiteUrl">website_url</label></td>
+                <td>
+                    <input id="websiteUrl" name="websiteUrl" type="url"
+                           th:value="${mode == 'new'}
+                               ? (${form?.websiteUrl} ?: '')
+                               : ${r.websiteUrl}"
+                           style="width: 100%; padding: 0.4rem;"/>
+                </td>
+            </tr>
+            <tr>
+                <td><label for="addressLine">address_line</label></td>
+                <td>
+                    <input id="addressLine" name="addressLine"
+                           th:value="${mode == 'new'}
+                               ? (${form?.addressLine} ?: '')
+                               : ${r.addressLine}"
+                           style="width: 100%; padding: 0.4rem;"/>
+                </td>
+            </tr>
+            <tr>
+                <td><label for="city">city</label></td>
+                <td>
+                    <input id="city" name="city"
+                           th:value="${mode == 'new'}
+                               ? (${form?.city} ?: 'Cluj-Napoca')
+                               : ${r.city}"
+                           style="width: 100%; padding: 0.4rem;"/>
+                </td>
+            </tr>
+            <tr>
+                <td><label for="latitude">latitude</label></td>
+                <td>
+                    <input id="latitude" name="latitude" type="number" step="0.000001" min="-90" max="90"
+                           th:value="${mode == 'new'}
+                               ? (${form?.latitude} ?: '')
+                               : ${r.latitude}"
+                           style="width: 100%; padding: 0.4rem;"/>
+                    <div class="muted">set together with longitude (or leave both blank)</div>
+                </td>
+            </tr>
+            <tr>
+                <td><label for="longitude">longitude</label></td>
+                <td>
+                    <input id="longitude" name="longitude" type="number" step="0.000001" min="-180" max="180"
+                           th:value="${mode == 'new'}
+                               ? (${form?.longitude} ?: '')
+                               : ${r.longitude}"
+                           style="width: 100%; padding: 0.4rem;"/>
+                </td>
+            </tr>
+            <tr>
+                <td><label for="status">status</label></td>
+                <td>
+                    <select id="status" name="status" style="padding: 0.4rem;">
+                        <option th:each="s : ${statuses}"
+                                th:value="${s.name()}"
+                                th:selected="${mode == 'new'}
+                                    ? ${s.name() == 'DRAFT'}
+                                    : ${s == r.status}"
+                                th:text="${s}">
+                        </option>
+                    </select>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="toolbar" style="margin-top: 1rem;">
+            <button type="submit">Save</button>
+            <a class="secondary" th:href="@{/admin/restaurants}">Cancel</a>
+        </div>
+    </form>
+
+    <div th:if="${mode == 'edit' and r.status.name() != 'ARCHIVED'}" style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+        <h3>Danger zone</h3>
+        <form th:action="@{'/admin/restaurants/' + ${r.restaurantKey} + '/archive'}" method="post"
+              onsubmit="return confirm('Archive this restaurant? It will no longer be visible to consumers.');">
+            <button type="submit" class="secondary">Archive restaurant</button>
+        </form>
+    </div>
+    <div th:if="${mode == 'edit' and r.status.name() == 'ARCHIVED'}" style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+        <h3>Restore</h3>
+        <form th:action="@{'/admin/restaurants/' + ${r.restaurantKey} + '/activate'}" method="post">
+            <button type="submit">Activate restaurant</button>
+        </form>
+    </div>
+</main>
+</body>
+</html>

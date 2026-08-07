@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/_layout :: head(${mode == 'new'} ? 'New product' : 'Edit product: ' + ${p.productKey})}"></head>
+<body>
+<header th:replace="~{admin/_layout :: topbar}"></header>
+<nav th:replace="~{admin/_layout :: nav('products')}"></nav>
+<main>
+    <h2 th:text="${mode == 'new'} ? 'New product' : 'Edit product: ' + ${p.productKey}"></h2>
+
+    <div th:if="${errorMessage != null}" class="errors">
+        <h3>Validation error</h3>
+        <p th:text="${errorMessage}"></p>
+    </div>
+
+    <form th:action="${mode == 'new'} ? @{/admin/products} : @{'/admin/products/' + ${p.productKey}}"
+          method="post">
+        <table style="max-width: 720px;">
+            <tbody>
+            <tr>
+                <td><label for="productKey">product_key</label></td>
+                <td>
+                    <input id="productKey" name="productKey" required="required"
+                           pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+                           th:value="${mode == 'new'}
+                               ? (${form?.productKey} ?: '')
+                               : ${p.productKey}"
+                           th:readonly="${mode == 'edit'}"
+                           style="width: 100%; padding: 0.4rem;"/>
+                </td>
+            </tr>
+            <tr>
+                <td><label for="restaurantKey">restaurant_key</label></td>
+                <td>
+                    <select id="restaurantKey" name="restaurantKey" required="required" style="padding: 0.4rem; min-width: 240px;">
+                        <option th:each="r : ${restaurants}"
+                                th:value="${r.restaurantKey}"
+                                th:selected="${mode == 'new'}
+                                    ? false
+                                    : ${r.id == p.restaurantId}"
+                                th:text="${r.name + ' (' + r.restaurantKey + ')'}">
+                        </option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td><label for="name">name</label></td>
+                <td>
+                    <input id="name" name="name" required="required"
+                           th:value="${mode == 'new'}
+                               ? (${form?.name} ?: '')
+                               : ${p.name}"
+                           style="width: 100%; padding: 0.4rem;"/>
+                </td>
+            </tr>
+            <tr>
+                <td><label for="description">description</label></td>
+                <td>
+                    <textarea id="description" name="description" rows="3"
+                              th:text="${mode == 'new'}
+                                  ? (${form?.description} ?: '')
+                                  : ${p.description}"
+                              style="width: 100%; padding: 0.4rem;"></textarea>
+                </td>
+            </tr>
+            <tr>
+                <td><label for="weightText">weight_text</label></td>
+                <td>
+                    <input id="weightText" name="weightText"
+                           th:value="${mode == 'new'}
+                               ? (${form?.weightText} ?: '')
+                               : ${p.weightText}"
+                           style="width: 100%; padding: 0.4rem;"
+                           placeholder="e.g. 350g, 500ml"/>
+                </td>
+            </tr>
+            <tr>
+                <td><label for="status">status</label></td>
+                <td>
+                    <select id="status" name="status" style="padding: 0.4rem;">
+                        <option th:each="s : ${statuses}"
+                                th:value="${s.name()}"
+                                th:selected="${mode == 'new'}
+                                    ? ${s.name() == 'DRAFT'}
+                                    : ${s == p.status}"
+                                th:text="${s}">
+                        </option>
+                    </select>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="toolbar" style="margin-top: 1rem;">
+            <button type="submit">Save</button>
+            <a class="secondary" th:href="@{/admin/products}">Cancel</a>
+        </div>
+    </form>
+</main>
+</body>
+</html>

@@ -6,6 +6,11 @@
 <nav th:replace="~{admin/_layout :: nav('menus')}"></nav>
 <main>
     <h2>Menus</h2>
+
+    <div th:if="${successMessage != null}" class="success">
+        <p th:text="${successMessage}"></p>
+    </div>
+
     <div class="toolbar">
         <form method="get" th:action="@{/admin/menus}">
             <input name="q" th:value="${q}" placeholder="search key or name"/>
@@ -18,7 +23,8 @@
             </select>
             <button type="submit">Filter</button>
         </form>
-        <a class="secondary" th:href="@{/admin/api/csv/menus}" style="margin-left:auto;">Download CSV</a>
+        <a th:href="@{/admin/menus/new}" style="margin-left:auto;">+ New menu</a>
+        <a class="secondary" th:href="@{/admin/api/csv/menus}">Download CSV</a>
     </div>
 
     <div th:if="${rows.empty}" class="empty"><p><strong>No menus yet.</strong></p></div>
@@ -39,7 +45,7 @@
                 <a th:if="${row.menu.sourceUrl != null}" th:href="${row.menu.sourceUrl}" target="_blank" rel="noopener">link</a>
                 <span th:unless="${row.menu.sourceUrl != null}" class="muted">—</span>
             </td>
-            <td class="actions"><a th:href="@{'/admin/menus/' + ${row.menu.menuKey}}">View</a></td>
+            <td class="actions"><a th:href="@{'/admin/menus/' + ${row.menu.menuKey} + '/edit'}">Edit</a></td>
         </tr>
         </tbody>
     </table>

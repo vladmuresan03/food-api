@@ -6,6 +6,11 @@
 <nav th:replace="~{admin/_layout :: nav('restaurants')}"></nav>
 <main>
     <h2>Restaurants</h2>
+
+    <div th:if="${successMessage != null}" class="success">
+        <p th:text="${successMessage}"></p>
+    </div>
+
     <div class="toolbar">
         <form method="get" th:action="@{/admin/restaurants}">
             <input name="q" th:value="${q}" placeholder="search name or key"/>
@@ -18,7 +23,8 @@
             </select>
             <button type="submit">Filter</button>
         </form>
-        <a class="secondary" th:href="@{/admin/api/csv/restaurants}" style="margin-left:auto;">Download CSV</a>
+        <a th:href="@{/admin/restaurants/new}" style="margin-left:auto;">+ New restaurant</a>
+        <a class="secondary" th:href="@{/admin/api/csv/restaurants}">Download CSV</a>
     </div>
 
     <div th:if="${rows.empty}" class="empty">
@@ -44,7 +50,7 @@
             <td th:text="${r.productCount}"></td>
             <td><span class="pill" th:classappend="'pill-' + ${#strings.toLowerCase(r.status)}" th:text="${r.status}"></span></td>
             <td class="muted" th:text="${#temporals.format(r.updatedAt, 'yyyy-MM-dd HH:mm')}"></td>
-            <td class="actions"><a th:href="@{'/admin/restaurants/' + ${r.restaurantKey}}">View</a></td>
+            <td class="actions"><a th:href="@{'/admin/restaurants/' + ${r.restaurantKey} + '/edit'}">Edit</a></td>
         </tr>
         </tbody>
     </table>

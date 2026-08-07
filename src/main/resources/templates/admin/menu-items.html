@@ -6,6 +6,11 @@
 <nav th:replace="~{admin/_layout :: nav('menu-items')}"></nav>
 <main>
     <h2>Menu items</h2>
+
+    <div th:if="${successMessage != null}" class="success">
+        <p th:text="${successMessage}"></p>
+    </div>
+
     <div class="toolbar">
         <form method="get" th:action="@{/admin/menu-items}">
             <input name="menuKey" th:value="${menuKey}" placeholder="menu_key"/>
@@ -37,9 +42,10 @@
             <td><span th:text="${r.available} ? 'yes' : 'no'"></span></td>
             <td class="muted" th:text="${#temporals.format(r.updatedAt, 'yyyy-MM-dd HH:mm')}"></td>
             <td class="actions">
-                <form th:action="@{'/admin/api/menu-items/' + ${r.id}}" method="post" style="display:inline">
-                    <input type="hidden" name="_method" value="delete"/>
-                    <button type="submit" style="background:transparent;border:0;color:#dc2626;cursor:pointer;font-size:0.85rem;padding:0;"
+                <a th:href="@{'/admin/menu-items/' + ${r.id} + '/edit'}">Edit</a>
+                <form th:action="@{'/admin/menu-items/' + ${r.id} + '/delete'}" method="post" style="display:inline">
+                    <button type="submit"
+                            style="background:transparent;border:0;color:#dc2626;cursor:pointer;font-size:0.85rem;padding:0;margin-left:0.5rem;"
                             onclick="return confirm('Delete this menu item?')">Delete</button>
                 </form>
             </td>

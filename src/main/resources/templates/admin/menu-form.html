@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/_layout :: head(${mode == 'new'} ? 'New menu' : 'Edit menu: ' + ${m.menuKey})}"></head>
+<body>
+<header th:replace="~{admin/_layout :: topbar}"></header>
+<nav th:replace="~{admin/_layout :: nav('menus')}"></nav>
+<main>
+    <h2 th:text="${mode == 'new'} ? 'New menu' : 'Edit menu: ' + ${m.menuKey}"></h2>
+
+    <div th:if="${errorMessage != null}" class="errors">
+        <h3>Validation error</h3>
+        <p th:text="${errorMessage}"></p>
+    </div>
+
+    <form th:action="${mode == 'new'} ? @{/admin/menus} : @{'/admin/menus/' + ${m.menuKey}}"
+          method="post">
+        <table style="max-width: 720px;">
+            <tbody>
+            <tr>
+                <td><label for="menuKey">menu_key</label></td>
+                <td>
+                    <input id="menuKey" name="menuKey" required="required"
+                           pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+                           th:value="${mode == 'new'}
+                               ? (${form?.menuKey} ?: '')
+                               : ${m.menuKey}"
+                           th:readonly="${mode == 'edit'}"
+                           style="width: 100%; padding: 0.4rem;"/>
+                </td>
+            </tr>
+            <tr>
+                <td><label for="restaurantKey">restaurant_key</label></td>
+                <td>
+                    <select id="restaurantKey" name="restaurantKey" required="required" style="padding: 0.4rem; min-width: 240px;">
+                        <option th:each="r : ${restaurants}"
+                                th:value="${r.restaurantKey}"
+                                th:selected="${mode == 'new'}
+                                    ? false
+                                    : ${r.id == m.restaurantId}"
+                                th:text="${r.name + ' (' + r.restaurantKey + ')'}">
+                        </option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td><label for="name">name</label></td>
+                <td>
+                    <input id="name" name="name" required="required"
+                           th:value="${mode == 'new'}
+                               ? (${form?.name} ?: '')
+                               : ${m.name}"
+                           style="width: 100%; padding: 0.4rem;"/>
+                </td>
+            </tr>
+            <tr>
+                <td><label for="menuType">menu_type</label></td>
+                <td>
+                    <select id="menuType" name="menuType" style="padding: 0.4rem;">
+                        <option th:each="t : ${menuTypes}"
+                                th:value="${t.name()}"
+                                th:selected="${mode == 'new'}
+                                    ? ${t.name() == 'PERMANENT'}
+                                    : ${t == m.menuType}"
+                                th:text="${t}">
+                        </option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td><label for="status">status</label></td>
+                <td>
+                    <select id="status" name="status" style="padding: 0.4rem;">
+                        <option th:each="s : ${statuses}"
+                                th:value="${s.name()}"
+                                th:selected="${mode == 'new'}
+                                    ? ${s.name() == 'DRAFT'}
+                                    : ${s == m.status}"
+                                th:text="${s}">
+                        </option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td><label for="sourceUrl">source_url</label></td>
+                <td>
+                    <input id="sourceUrl" name="sourceUrl" type="url"
+                           th:value="${mode == 'new'}
+                               ? (${form?.sourceUrl} ?: '')
+                               : ${m.sourceUrl}"
+                           style="width: 100%; padding: 0.4rem;"/>
+                </td>
+            </tr>
+            <tr>
+                <td><label for="validFrom">valid_from</label></td>
+                <td>
+                    <input id="validFrom" name="validFrom" type="date"
+                           th:value="${mode == 'new'}
+                               ? (${form?.validFrom} ?: '')
+                               : ${m.validFrom}"
+                           style="padding: 0.4rem;"/>
+                </td>
+            </tr>
+            <tr>
+                <td><label for="validTo">valid_to</label></td>
+                <td>
+                    <input id="validTo" name="validTo" type="date"
+                           th:value="${mode == 'new'}
+                               ? (${form?.validTo} ?: '')
+                               : ${m.validTo}"
+                           style="padding: 0.4rem;"/>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="toolbar" style="margin-top: 1rem;">
+            <button type="submit">Save</button>
+            <a class="secondary" th:href="@{/admin/menus}">Cancel</a>
+        </div>
+    </form>
+</main>
+</body>
+</html>
