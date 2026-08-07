@@ -163,6 +163,24 @@ class AdminCrudTest {
         assertThat(m.getPublishedAt()).isNotNull();
     }
 
+    @Test
+    void archiveMenuFlipsStatus() throws Exception {
+        seedRestaurant();
+        menuCsv.parse(new StringReader("""
+                menu_key,restaurant_key,name,menu_type,status
+                arc-menu,crud-r,Arc,PERMANENT,PUBLISHED
+                """), false);
+
+        mvc.perform(post("/admin/menus/arc-menu/archive")
+                        .with(httpBasic("test-admin", "test-password"))
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/menus"));
+
+        assertThat(menus.findByMenuKey("arc-menu").orElseThrow().getStatus())
+                .isEqualTo(MenuStatus.ARCHIVED);
+    }
+
     // ------------------------------------------------------------------ product CRUD
 
     @Test
@@ -234,6 +252,24 @@ class AdminCrudTest {
         assertThat(p.getWeightText()).isEqualTo("500g");
     }
 
+    @Test
+    void archiveProductFlipsStatus() throws Exception {
+        seedRestaurant();
+        productCsv.parse(new StringReader("""
+                product_key,restaurant_key,name,status
+                arc-prod,crud-r,Arc,ACTIVE
+                """), false);
+
+        mvc.perform(post("/admin/products/arc-prod/archive")
+                        .with(httpBasic("test-admin", "test-password"))
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/products"));
+
+        assertThat(products.findByProductKey("arc-prod").orElseThrow().getStatus())
+                .isEqualTo(ProductStatus.ARCHIVED);
+    }
+
     // ------------------------------------------------------------------ menu-item CRUD
 
     @Test
@@ -299,6 +335,28 @@ class AdminCrudTest {
         assertThat(mi.getPrice()).isEqualByComparingTo("22.00");
         assertThat(mi.getCurrency()).isEqualTo("RON");
         assertThat(mi.getSortOrder()).isEqualTo(5);
+    }
+
+    @Test
+    void menuItemsListRendersWithoutNpe() throws Exception {
+        seedRestaurant();
+        menuCsv.parse(new StringReader("""
+                menu_key,restaurant_key,name,menu_type,status
+                np-menu,crud-r,NP,PERMANENT,DRAFT
+                """), false);
+        productCsv.parse(new StringReader("""
+                product_key,restaurant_key,name,status
+                np-prod,crud-r,NP Prod,DRAFT
+                """), false);
+        menuItemCsv.parse(new StringReader("""
+                menu_key,product_key,section_name,price,currency,available,sort_order
+                np-menu,np-prod,Starters,12.00,RON,true,1
+                """), false);
+
+        mvc.perform(get("/admin/menu-items")
+                        .with(httpBasic("test-admin", "test-password")))
+                .andExpect(status().isOk())
+                .andExpect(xpath("//td/code[text()='np-menu']").exists());
     }
 
     @Test

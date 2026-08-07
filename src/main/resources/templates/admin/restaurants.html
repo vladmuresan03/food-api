@@ -50,7 +50,16 @@
             <td th:text="${r.productCount}"></td>
             <td><span class="pill" th:classappend="'pill-' + ${#strings.toLowerCase(r.status)}" th:text="${r.status}"></span></td>
             <td class="muted" th:text="${#temporals.format(r.updatedAt, 'yyyy-MM-dd HH:mm')}"></td>
-            <td class="actions"><a th:href="@{'/admin/restaurants/' + ${r.restaurantKey} + '/edit'}">Edit</a></td>
+            <td class="actions">
+                <a th:href="@{'/admin/restaurants/' + ${r.restaurantKey} + '/edit'}">Edit</a>
+                <form th:if="${r.status != 'ARCHIVED'}"
+                      th:action="@{'/admin/restaurants/' + ${r.restaurantKey} + '/archive'}"
+                      method="post" style="display:inline;margin-left:0.5rem;">
+                    <button type="submit"
+                            style="background:transparent;border:0;color:#dc2626;cursor:pointer;font-size:0.85rem;padding:0;"
+                            onclick="return confirm('Archive this restaurant? It will no longer be visible to consumers.')">Delete</button>
+                </form>
+            </td>
         </tr>
         </tbody>
     </table>

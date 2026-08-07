@@ -432,6 +432,30 @@ public class AdminViewController {
                            MenuStatus status, String sourceUrl, String validFrom, String validTo) {
     }
 
+    @PostMapping("/menus/{key}/archive")
+    public String archiveMenu(@PathVariable("key") String key, Authentication auth,
+                              RedirectAttributes ra) {
+        Menu m = menus.findByMenuKey(key)
+                .orElseThrow(() -> new NoSuchElementException("Menu not found: " + key));
+        m.setStatus(MenuStatus.ARCHIVED);
+        m.setUpdatedBy(actor(auth));
+        menus.save(m);
+        ra.addFlashAttribute("successMessage", "Menu '" + key + "' archived");
+        return "redirect:/admin/menus";
+    }
+
+    @PostMapping("/menus/{key}/activate")
+    public String activateMenu(@PathVariable("key") String key, Authentication auth,
+                               RedirectAttributes ra) {
+        Menu m = menus.findByMenuKey(key)
+                .orElseThrow(() -> new NoSuchElementException("Menu not found: " + key));
+        m.setStatus(MenuStatus.PUBLISHED);
+        m.setUpdatedBy(actor(auth));
+        menus.save(m);
+        ra.addFlashAttribute("successMessage", "Menu '" + key + "' activated");
+        return "redirect:/admin/menus";
+    }
+
     private void applyMenu(Menu m, String menuKey, Long restaurantId, String name,
                            MenuType menuType, MenuStatus status, String sourceUrl,
                            LocalDate validFrom, LocalDate validTo) {
@@ -516,6 +540,30 @@ public class AdminViewController {
         p.setUpdatedBy(actor(auth));
         products.save(p);
         ra.addFlashAttribute("successMessage", "Product '" + p.getProductKey() + "' updated");
+        return "redirect:/admin/products";
+    }
+
+    @PostMapping("/products/{key}/archive")
+    public String archiveProduct(@PathVariable("key") String key, Authentication auth,
+                                 RedirectAttributes ra) {
+        Product p = products.findByProductKey(key)
+                .orElseThrow(() -> new NoSuchElementException("Product not found: " + key));
+        p.setStatus(ProductStatus.ARCHIVED);
+        p.setUpdatedBy(actor(auth));
+        products.save(p);
+        ra.addFlashAttribute("successMessage", "Product '" + key + "' archived");
+        return "redirect:/admin/products";
+    }
+
+    @PostMapping("/products/{key}/activate")
+    public String activateProduct(@PathVariable("key") String key, Authentication auth,
+                                  RedirectAttributes ra) {
+        Product p = products.findByProductKey(key)
+                .orElseThrow(() -> new NoSuchElementException("Product not found: " + key));
+        p.setStatus(ProductStatus.ACTIVE);
+        p.setUpdatedBy(actor(auth));
+        products.save(p);
+        ra.addFlashAttribute("successMessage", "Product '" + key + "' activated");
         return "redirect:/admin/products";
     }
 

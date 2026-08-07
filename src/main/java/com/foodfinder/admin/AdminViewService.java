@@ -125,10 +125,15 @@ public class AdminViewService {
         Map<Long, String> weightByProductId = products.findAll().stream()
                 .collect(Collectors.toMap(Product::getId, p -> p.getWeightText() == null ? "" : p.getWeightText()));
         Map<Long, String> productThumbById = products.findAll().stream()
-                .collect(Collectors.toMap(Product::getId, p ->
-                        photos.findFirstByProductIdAndPrimaryPhotoTrue(p.getId())
+                .collect(Collectors.toMap(
+                        Product::getId,
+                        p -> photos.findFirstByProductIdAndPrimaryPhotoTrue(p.getId())
                                 .map(ph -> "/api/photos/" + ph.getPhotoKey() + "/thumbnail")
-                                .orElse(null)));
+                                // Collectors.toMap rejects null values; default to
+                                // empty string and let the template show the
+                                // "no thumbnail" state via #strings.isEmpty.
+                                .orElse(""),
+                        (a, b) -> a));
 
         return menuItems.findAll().stream()
                 .map(MenuItem::getMenuId).distinct()
