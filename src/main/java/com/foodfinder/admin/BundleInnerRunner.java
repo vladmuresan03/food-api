@@ -1,9 +1,11 @@
 package com.foodfinder.admin;
 
 import com.foodfinder.csv.CsvImportReport;
+import com.foodfinder.csv.IngredientsCsv;
 import com.foodfinder.csv.MenuAssetCsv;
 import com.foodfinder.csv.MenuCsv;
 import com.foodfinder.csv.MenuItemCsv;
+import com.foodfinder.csv.NutritionCsv;
 import com.foodfinder.csv.PhotoCsv;
 import com.foodfinder.csv.ProductCsv;
 import com.foodfinder.csv.RestaurantCsv;
@@ -35,17 +37,22 @@ public class BundleInnerRunner {
     private final RestaurantCsv restaurantCsv;
     private final MenuCsv menuCsv;
     private final ProductCsv productCsv;
+    private final NutritionCsv nutritionCsv;
+    private final IngredientsCsv ingredientsCsv;
     private final MenuItemCsv menuItemCsv;
     private final PhotoCsv photoCsv;
     private final MenuAssetCsv menuAssetCsv;
     private final CsvImportLogRepository importLog;
 
     public BundleInnerRunner(RestaurantCsv restaurantCsv, MenuCsv menuCsv, ProductCsv productCsv,
+                             NutritionCsv nutritionCsv, IngredientsCsv ingredientsCsv,
                              MenuItemCsv menuItemCsv, PhotoCsv photoCsv, MenuAssetCsv menuAssetCsv,
                              CsvImportLogRepository importLog) {
         this.restaurantCsv = restaurantCsv;
         this.menuCsv = menuCsv;
         this.productCsv = productCsv;
+        this.nutritionCsv = nutritionCsv;
+        this.ingredientsCsv = ingredientsCsv;
         this.menuItemCsv = menuItemCsv;
         this.photoCsv = photoCsv;
         this.menuAssetCsv = menuAssetCsv;
@@ -65,6 +72,8 @@ public class BundleInnerRunner {
                 case "restaurants" -> restaurantCsv.parse(reader, dryRun);
                 case "menus" -> menuCsv.parse(reader, dryRun);
                 case "products" -> productCsv.parse(reader, dryRun);
+                case "nutrition" -> nutritionCsv.parse(reader, dryRun);
+                case "ingredients" -> ingredientsCsv.parse(reader, dryRun);
                 case "menu-items" -> menuItemCsv.parse(reader, dryRun);
                 case "photos" -> photoCsv.parse(reader, dryRun);
                 case "menu-assets" -> menuAssetCsv.parse(reader, dryRun);

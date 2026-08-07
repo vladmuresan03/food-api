@@ -250,6 +250,8 @@ public class AdminViewService {
                 new CsvResourceRow("restaurants", "restaurants.csv"),
                 new CsvResourceRow("menus", "menus.csv"),
                 new CsvResourceRow("products", "products.csv"),
+                new CsvResourceRow("nutrition", "nutrition.csv"),
+                new CsvResourceRow("ingredients", "ingredients.csv"),
                 new CsvResourceRow("menu-items", "menu_items.csv"),
                 new CsvResourceRow("photos", "photos.csv"),
                 new CsvResourceRow("menu-assets", "menu_assets.csv"));

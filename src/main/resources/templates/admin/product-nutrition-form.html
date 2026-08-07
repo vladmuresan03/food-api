@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/_layout :: head('Nutrition: ' + ${p.productKey})}"></head>
+<body>
+<header th:replace="~{admin/_layout :: topbar}"></header>
+<nav th:replace="~{admin/_layout :: nav('products')}"></nav>
+<main>
+    <h2 th:text="'Nutrition for ' + ${p.productKey}"></h2>
+    <p class="muted">EU 1169/2011 Anex XIV mandatory fields. All values per the chosen basis (default per_100g).</p>
+
+    <div th:if="${errorMessage != null}" class="errors">
+        <h3>Validation error</h3>
+        <p th:text="${errorMessage}"></p>
+    </div>
+
+    <form th:action="@{'/admin/products/' + ${p.productKey} + '/nutrition'}" method="post">
+        <table style="max-width: 720px;">
+            <tbody>
+            <tr>
+                <td><label for="basis">basis</label></td>
+                <td>
+                    <select id="basis" name="basis" style="padding: 0.4rem;">
+                        <option value="per_100g"
+                                th:selected="${nutrition == null or nutrition.basis == 'per_100g'}">per_100g (default)</option>
+                        <option value="per_100ml"
+                                th:selected="${nutrition != null and nutrition.basis == 'per_100ml'}">per_100ml</option>
+                        <option value="per_portion"
+                                th:selected="${nutrition != null and nutrition.basis == 'per_portion'}">per_portion</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td><label for="energyKcal">energy_kcal</label></td>
+                <td><input id="energyKcal" name="energyKcal" type="number" step="0.01" min="0"
+                           th:value="${nutrition != null} ? ${nutrition.energyKcal} : ''"
+                           style="padding: 0.4rem; width: 160px;"/></td>
+            </tr>
+            <tr>
+                <td><label for="fatG">fat_g</label></td>
+                <td><input id="fatG" name="fatG" type="number" step="0.01" min="0"
+                           th:value="${nutrition != null} ? ${nutrition.fatG} : ''"
+                           style="padding: 0.4rem; width: 160px;"/></td>
+            </tr>
+            <tr>
+                <td><label for="satFatG">sat_fat_g</label></td>
+                <td><input id="satFatG" name="satFatG" type="number" step="0.01" min="0"
+                           th:value="${nutrition != null} ? ${nutrition.satFatG} : ''"
+                           style="padding: 0.4rem; width: 160px;"/></td>
+            </tr>
+            <tr>
+                <td><label for="carbsG">carbs_g</label></td>
+                <td><input id="carbsG" name="carbsG" type="number" step="0.01" min="0"
+                           th:value="${nutrition != null} ? ${nutrition.carbsG} : ''"
+                           style="padding: 0.4rem; width: 160px;"/></td>
+            </tr>
+            <tr>
+                <td><label for="sugarsG">sugars_g</label></td>
+                <td><input id="sugarsG" name="sugarsG" type="number" step="0.01" min="0"
+                           th:value="${nutrition != null} ? ${nutrition.sugarsG} : ''"
+                           style="padding: 0.4rem; width: 160px;"/></td>
+            </tr>
+            <tr>
+                <td><label for="proteinG">protein_g</label></td>
+                <td><input id="proteinG" name="proteinG" type="number" step="0.01" min="0"
+                           th:value="${nutrition != null} ? ${nutrition.proteinG} : ''"
+                           style="padding: 0.4rem; width: 160px;"/></td>
+            </tr>
+            <tr>
+                <td><label for="saltG">salt_g</label></td>
+                <td><input id="saltG" name="saltG" type="number" step="0.001" min="0"
+                           th:value="${nutrition != null} ? ${nutrition.saltG} : ''"
+                           style="padding: 0.4rem; width: 160px;"/></td>
+            </tr>
+            <tr>
+                <td><label for="fiberG">fiber_g</label></td>
+                <td><input id="fiberG" name="fiberG" type="number" step="0.01" min="0"
+                           th:value="${nutrition != null} ? ${nutrition.fiberG} : ''"
+                           style="padding: 0.4rem; width: 160px;"/></td>
+            </tr>
+            <tr>
+                <td><label for="sourceUrl">source_url</label></td>
+                <td><input id="sourceUrl" name="sourceUrl" type="url" maxlength="500"
+                           th:value="${nutrition != null} ? ${nutrition.sourceUrl} : ''"
+                           style="width: 100%; padding: 0.4rem;"
+                           placeholder="https://example.com/spec.pdf"/></td>
+            </tr>
+            <tr>
+                <td><label for="lastVerifiedAt">last_verified_at</label></td>
+                <td><input id="lastVerifiedAt" name="lastVerifiedAt" type="date"
+                           th:value="${nutrition != null} ? ${#temporals.format(nutrition.lastVerifiedAt, 'yyyy-MM-dd')} : ''"
+                           style="padding: 0.4rem;"/></td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="toolbar" style="margin-top: 1rem;">
+            <button type="submit">Save</button>
+            <a class="secondary" th:href="@{'/admin/products/' + ${p.productKey}}">Cancel</a>
+        </div>
+    </form>
+</main>
+</body>
+</html>

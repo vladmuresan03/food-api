@@ -45,6 +45,7 @@
             <td><span class="pill" th:classappend="'pill-' + ${#strings.toLowerCase(p.status)}" th:text="${p.status}"></span></td>
             <td class="muted" th:text="${#temporals.format(p.updatedAt, 'yyyy-MM-dd HH:mm')}"></td>
             <td class="actions">
+                <a th:href="@{'/admin/products/' + ${p.productKey}}">View</a>
                 <a th:href="@{'/admin/products/' + ${p.productKey} + '/edit'}">Edit</a>
                 <form th:if="${p.status != 'ARCHIVED'}"
                       th:action="@{'/admin/products/' + ${p.productKey} + '/archive'}"

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/_layout :: head('Ingredients: ' + ${p.productKey})}"></head>
+<body>
+<header th:replace="~{admin/_layout :: topbar}"></header>
+<nav th:replace="~{admin/_layout :: nav('products')}"></nav>
+<main>
+    <h2 th:text="'Ingredients for ' + ${p.productKey}"></h2>
+    <p class="muted">
+        Up to 50 ingredients, ordered by position (descrescator dupa greutate, per EU 1169/2011 Art. 18).
+        Leave a row blank to skip it. is_allergen and allergen_code must agree.
+    </p>
+
+    <div th:if="${errorMessage != null}" class="errors">
+        <h3>Validation error</h3>
+        <p th:text="${errorMessage}"></p>
+    </div>
+
+    <form th:action="@{'/admin/products/' + ${p.productKey} + '/ingredients'}" method="post">
+        <table style="max-width: 100%;">
+            <thead>
+            <tr style="background: #f0f0f0;">
+                <th style="width: 4ch;">#</th>
+                <th>name</th>
+                <th style="width: 8ch;">is_allergen</th>
+                <th>allergen_code</th>
+                <th style="width: 8ch;">%</th>
+                <th style="width: 4ch;">origin</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="row : ${#numbers.sequence(1, 50)}">
+                <td th:text="${row}"></td>
+                <td>
+                    <input type="text" th:name="'ingName'" maxlength="200" style="width: 100%; padding: 0.2rem;"
+                           th:value="${ingredients != null and ingredients.size() >= row}
+                               ? ${ingredients[row-1].name} : ''"
+                           th:placeholder="'ingredient ' + ${row}"/>
+                </td>
+                <td style="text-align: center;">
+                    <input type="checkbox" th:name="'ingIsAllergen'" value="true"
+                           th:checked="${ingredients != null and ingredients.size() >= row
+                               and ingredients[row-1].allergenCode != null}"/>
+                </td>
+                <td>
+                    <select th:name="'ingAllergenCode'" style="padding: 0.2rem; min-width: 12ch;">
+                        <option value="">—</option>
+                        <option th:each="code : ${allergenCodes}"
+                                th:value="${code}"
+                                th:selected="${ingredients != null and ingredients.size() >= row
+                                    and ingredients[row-1].allergenCode != null
+                                    and ingredients[row-1].allergenCode == code}"
+                                th:text="${code}">
+                        </option>
+                    </select>
+                </td>
+                <td>
+                    <input type="number" th:name="'ingPercentage'" step="0.01" min="0" max="100"
+                           style="width: 8ch; padding: 0.2rem;"
+                           th:value="${ingredients != null and ingredients.size() >= row
+                               ? ${ingredients[row-1].percentage} : ''"/>
+                </td>
+                <td>
+                    <input type="text" th:name="'ingOriginCountry'" maxlength="2"
+                           style="width: 4ch; padding: 0.2rem;"
+                           th:value="${ingredients != null and ingredients.size() >= row
+                               ? ${ingredients[row-1].originCountry} : ''"
+                           placeholder="RO"/>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="toolbar" style="margin-top: 1rem;">
+            <button type="submit">Save (replaces all)</button>
+            <a class="secondary" th:href="@{'/admin/products/' + ${p.productKey}}">Cancel</a>
+        </div>
+    </form>
+</main>
+</body>
+</html>

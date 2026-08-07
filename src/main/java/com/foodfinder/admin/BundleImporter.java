@@ -28,7 +28,9 @@ import java.util.zip.ZipInputStream;
 public class BundleImporter {
 
     private static final List<String> ORDER = List.of(
-            "restaurants", "menus", "products", "menu-items", "photos", "menu-assets");
+            "restaurants", "menus", "products",
+            "nutrition", "ingredients",
+            "menu-items", "photos", "menu-assets");
 
     private final BundleInnerRunner inner;
     private final CsvImportLogRepository importLog;

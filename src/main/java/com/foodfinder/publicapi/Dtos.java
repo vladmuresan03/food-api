@@ -75,7 +75,10 @@ public final class Dtos {
             String tags,
             Integer spiceLevel,
             boolean available,
-            ImageRef image) {
+            ImageRef image,
+            Nutrition nutrition,
+            List<Ingredient> ingredients,
+            Dietary dietary) {
     }
 
     public record ImageRef(
@@ -112,7 +115,55 @@ public final class Dtos {
             RestaurantRef restaurant,
             List<MenuAppearance> menuAppearances,
             List<Photo> photos,
-            String primaryPhotoThumbnailUrl) {
+            String primaryPhotoThumbnailUrl,
+            Nutrition nutrition,
+            List<Ingredient> ingredients,
+            Dietary dietary) {
+    }
+
+    /**
+     * EU 1169/2011 Anex XIV mandatory nutrition declaration. All fields
+     * nullable — a "?" in the consumer UI means the restaurant has not
+     * declared the value. {@code basis} tells the UI whether the numbers
+     * are per 100g, per 100ml, or per declared portion.
+     */
+    public record Nutrition(
+            String basis,
+            java.math.BigDecimal energyKcal,
+            java.math.BigDecimal fatG,
+            java.math.BigDecimal satFatG,
+            java.math.BigDecimal carbsG,
+            java.math.BigDecimal sugarsG,
+            java.math.BigDecimal proteinG,
+            java.math.BigDecimal saltG,
+            java.math.BigDecimal fiberG,
+            String sourceUrl,
+            String lastVerifiedAt) {
+    }
+
+    /**
+     * One row from {@code product_ingredient}, in display order. The
+     * allergen flag is denormalized for index-only reads; the code is
+     * the source of truth for the consumer app's bold/icon overlay.
+     */
+    public record Ingredient(
+            int position,
+            String name,
+            boolean isAllergen,
+            String allergenCode,
+            java.math.BigDecimal percentage,
+            String originCountry) {
+    }
+
+    /**
+     * Computed from the structured ingredient list (never stored). Always
+     * accurate, regardless of how stale the manual "vegetarian" flag on
+     * the product would be.
+     */
+    public record Dietary(
+            boolean vegan,
+            boolean vegetarian,
+            boolean glutenFree) {
     }
 
     public record MenuAppearance(

@@ -2,9 +2,11 @@ package com.foodfinder.admin;
 
 import com.foodfinder.common.AdminConflictException;
 import com.foodfinder.csv.CsvImportReport;
+import com.foodfinder.csv.IngredientsCsv;
 import com.foodfinder.csv.MenuAssetCsv;
 import com.foodfinder.csv.MenuCsv;
 import com.foodfinder.csv.MenuItemCsv;
+import com.foodfinder.csv.NutritionCsv;
 import com.foodfinder.csv.PhotoCsv;
 import com.foodfinder.csv.ProductCsv;
 import com.foodfinder.csv.RestaurantCsv;
@@ -14,7 +16,12 @@ import com.foodfinder.menu.MenuItemRepository;
 import com.foodfinder.menu.MenuRepository;
 import com.foodfinder.menu.MenuStatus;
 import com.foodfinder.menu.MenuType;
+import com.foodfinder.product.AllergenCode;
 import com.foodfinder.product.Product;
+import com.foodfinder.product.ProductIngredient;
+import com.foodfinder.product.ProductIngredientRepository;
+import com.foodfinder.product.ProductNutrition;
+import com.foodfinder.product.ProductNutritionRepository;
 import com.foodfinder.product.ProductRepository;
 import com.foodfinder.product.ProductStatus;
 import com.foodfinder.restaurant.Restaurant;
@@ -63,37 +70,53 @@ public class AdminViewController {
     private final RestaurantCsv restaurantCsv;
     private final MenuCsv menuCsv;
     private final ProductCsv productCsv;
+    private final NutritionCsv nutritionCsv;
+    private final IngredientsCsv ingredientsCsv;
     private final MenuItemCsv menuItemCsv;
     private final PhotoCsv photoCsv;
     private final MenuAssetCsv menuAssetCsv;
     private final RestaurantRepository restaurants;
     private final MenuRepository menus;
     private final ProductRepository products;
+    private final ProductNutritionRepository nutritions;
+    private final ProductIngredientRepository ingredients;
     private final MenuItemRepository menuItems;
     private final CsvImportLogRepository importLog;
     private final BundleImporter bundleImporter;
     private final CsvPreviewService previewService;
+    private final AdminIngredientController adminIngredients;
 
     public AdminViewController(AdminViewService views, RestaurantCsv restaurantCsv, MenuCsv menuCsv,
-                               ProductCsv productCsv, MenuItemCsv menuItemCsv, PhotoCsv photoCsv,
-                               MenuAssetCsv menuAssetCsv, RestaurantRepository restaurants,
-                               MenuRepository menus, ProductRepository products,
-                               MenuItemRepository menuItems, CsvImportLogRepository importLog,
-                               BundleImporter bundleImporter, CsvPreviewService previewService) {
+                               ProductCsv productCsv, NutritionCsv nutritionCsv,
+                               IngredientsCsv ingredientsCsv, MenuItemCsv menuItemCsv,
+                               PhotoCsv photoCsv, MenuAssetCsv menuAssetCsv,
+                               RestaurantRepository restaurants, MenuRepository menus,
+                               ProductRepository products,
+                               ProductNutritionRepository nutritions,
+                               ProductIngredientRepository ingredients,
+                               MenuItemRepository menuItems,
+                               CsvImportLogRepository importLog, BundleImporter bundleImporter,
+                               CsvPreviewService previewService,
+                               AdminIngredientController adminIngredients) {
         this.views = views;
         this.restaurantCsv = restaurantCsv;
         this.menuCsv = menuCsv;
         this.productCsv = productCsv;
+        this.nutritionCsv = nutritionCsv;
+        this.ingredientsCsv = ingredientsCsv;
         this.menuItemCsv = menuItemCsv;
         this.photoCsv = photoCsv;
         this.menuAssetCsv = menuAssetCsv;
         this.restaurants = restaurants;
         this.menus = menus;
         this.products = products;
+        this.nutritions = nutritions;
+        this.ingredients = ingredients;
         this.menuItems = menuItems;
         this.importLog = importLog;
         this.bundleImporter = bundleImporter;
         this.previewService = previewService;
+        this.adminIngredients = adminIngredients;
     }
 
     // ------------------------------------------------------------------ pages
@@ -599,6 +622,215 @@ public class AdminViewController {
         return "redirect:/admin/products";
     }
 
+    // ------------------------------------------------------------------ product detail / nutrition / ingredients
+
+    @GetMapping("/products/{key}")
+    public String productDetail(@PathVariable("key") String key, Model model) {
+        Product p = products.findByProductKey(key)
+                .orElseThrow(() -> new NoSuchElementException("Product not found: " + key));
+        Restaurant r = restaurants.findById(p.getRestaurantId()).orElse(null);
+        ProductNutrition n = nutritions.findById(p.getId()).orElse(null);
+        List<ProductIngredient> ings = ingredients.findByIdProductIdOrderByIdPositionAsc(p.getId());
+        model.addAttribute("p", p);
+        model.addAttribute("restaurant", r);
+        model.addAttribute("nutrition", n);
+        model.addAttribute("ingredients", ings);
+        return "admin/product-detail";
+    }
+
+    @GetMapping("/products/{key}/nutrition")
+    public String editNutrition(@PathVariable("key") String key, Model model) {
+        Product p = products.findByProductKey(key)
+                .orElseThrow(() -> new NoSuchElementException("Product not found: " + key));
+        ProductNutrition n = nutritions.findById(p.getId()).orElse(null);
+        model.addAttribute("p", p);
+        model.addAttribute("nutrition", n);
+        return "admin/product-nutrition-form";
+    }
+
+    @PostMapping("/products/{key}/nutrition")
+    public String saveNutrition(@PathVariable("key") String key,
+                                @RequestParam(required = false) String basis,
+                                @RequestParam(required = false) BigDecimal energyKcal,
+                                @RequestParam(required = false) BigDecimal fatG,
+                                @RequestParam(required = false) BigDecimal satFatG,
+                                @RequestParam(required = false) BigDecimal carbsG,
+                                @RequestParam(required = false) BigDecimal sugarsG,
+                                @RequestParam(required = false) BigDecimal proteinG,
+                                @RequestParam(required = false) BigDecimal saltG,
+                                @RequestParam(required = false) BigDecimal fiberG,
+                                @RequestParam(required = false) String sourceUrl,
+                                @RequestParam(required = false) String lastVerifiedAt,
+                                Authentication auth,
+                                RedirectAttributes ra, Model model) {
+        Product p = products.findByProductKey(key)
+                .orElseThrow(() -> new NoSuchElementException("Product not found: " + key));
+        try {
+            AdminNutritionController.NutritionUpsert upsert =
+                    new AdminNutritionController.NutritionUpsert(basis, energyKcal, fatG, satFatG,
+                            carbsG, sugarsG, proteinG, saltG, fiberG, sourceUrl, lastVerifiedAt);
+            // The REST controller does the validation; we re-use it by
+            // re-throwing on the 4xx. Since the REST controller writes
+            // and we want to keep the form's re-render path consistent
+            // (redirect on success), we mirror its logic here. A small
+            // refactor would extract a shared service, but the duplication
+            // is bounded and keeps the form path independent of the
+            // REST controller's internals.
+            ProductNutrition existing = nutritions.findById(p.getId()).orElse(null);
+            ProductNutrition n = existing == null ? new ProductNutrition() : existing;
+            applyNutrition(n, p.getId(), upsert);
+            n.setUpdatedBy(actor(auth));
+            nutritions.save(n);
+            ra.addFlashAttribute("successMessage", "Nutrition saved for " + key);
+            return "redirect:/admin/products/" + key;
+        } catch (RuntimeException e) {
+            model.addAttribute("p", p);
+            ProductNutrition stale = nutritions.findById(p.getId()).orElse(null);
+            model.addAttribute("nutrition", stale);
+            model.addAttribute("errorMessage", e.getMessage());
+            return "admin/product-nutrition-form";
+        }
+    }
+
+    private void applyNutrition(ProductNutrition n, Long productId,
+                                AdminNutritionController.NutritionUpsert body) {
+        if (body.basis() != null && !body.basis().isBlank()) {
+            java.util.Set<String> allowed = java.util.Set.of("per_100g", "per_100ml", "per_portion");
+            if (!allowed.contains(body.basis())) {
+                throw new IllegalArgumentException(
+                        "basis must be one of " + allowed + " (got '" + body.basis() + "')");
+            }
+        }
+        rejectNegative(body.energyKcal(), "energy_kcal");
+        rejectNegative(body.fatG(), "fat_g");
+        rejectNegative(body.satFatG(), "sat_fat_g");
+        rejectNegative(body.carbsG(), "carbs_g");
+        rejectNegative(body.sugarsG(), "sugars_g");
+        rejectNegative(body.proteinG(), "protein_g");
+        rejectNegative(body.saltG(), "salt_g");
+        rejectNegative(body.fiberG(), "fiber_g");
+        java.time.Instant lastVerified = null;
+        if (body.lastVerifiedAt() != null && !body.lastVerifiedAt().isBlank()) {
+            try {
+                lastVerified = java.time.LocalDate.parse(body.lastVerifiedAt())
+                        .atStartOfDay().toInstant(java.time.ZoneOffset.UTC);
+            } catch (Exception e) {
+                throw new IllegalArgumentException(
+                        "last_verified_at must be ISO-8601 date (YYYY-MM-DD): "
+                                + body.lastVerifiedAt());
+            }
+        }
+        n.setProductId(productId);
+        n.setBasis(body.basis() == null || body.basis().isBlank() ? "per_100g" : body.basis());
+        n.setEnergyKcal(body.energyKcal());
+        n.setFatG(body.fatG());
+        n.setSatFatG(body.satFatG());
+        n.setCarbsG(body.carbsG());
+        n.setSugarsG(body.sugarsG());
+        n.setProteinG(body.proteinG());
+        n.setSaltG(body.saltG());
+        n.setFiberG(body.fiberG());
+        n.setSourceUrl(blankToNull(body.sourceUrl()));
+        n.setLastVerifiedAt(lastVerified);
+    }
+
+    private static void rejectNegative(BigDecimal v, String field) {
+        if (v != null && v.signum() < 0) {
+            throw new IllegalArgumentException(
+                    field + " must not be negative: " + v.toPlainString());
+        }
+    }
+
+    @GetMapping("/products/{key}/ingredients")
+    public String editIngredients(@PathVariable("key") String key, Model model) {
+        Product p = products.findByProductKey(key)
+                .orElseThrow(() -> new NoSuchElementException("Product not found: " + key));
+        List<ProductIngredient> ings = ingredients.findByIdProductIdOrderByIdPositionAsc(p.getId());
+        model.addAttribute("p", p);
+        model.addAttribute("ingredients", ings);
+        model.addAttribute("allergenCodes", AllergenCode.ALL_CODES);
+        return "admin/product-ingredients-form";
+    }
+
+    @PostMapping("/products/{key}/ingredients")
+    public String saveIngredients(@PathVariable("key") String key,
+                                  @RequestParam(required = false) java.util.List<String> ingName,
+                                  @RequestParam(required = false) java.util.List<String> ingIsAllergen,
+                                  @RequestParam(required = false) java.util.List<String> ingAllergenCode,
+                                  @RequestParam(required = false) java.util.List<String> ingPercentage,
+                                  @RequestParam(required = false) java.util.List<String> ingOriginCountry,
+                                  Authentication auth,
+                                  RedirectAttributes ra, Model model) {
+        Product p = products.findByProductKey(key)
+                .orElseThrow(() -> new NoSuchElementException("Product not found: " + key));
+        try {
+            // Index-aligned form fields. We coerce to 50 slots; missing
+            // entries are nulls, which the loop skips.
+            int size = 50;
+            List<AdminIngredientController.IngredientUpsert> body = new java.util.ArrayList<>();
+            for (int i = 0; i < size; i++) {
+                String name = pick(ingName, i);
+                if (name == null || name.isBlank()) {
+                    continue; // empty row -> omitted
+                }
+                if (name.length() > 200) {
+                    throw new IllegalArgumentException("Row " + (i + 1) + ": name must be at most 200 characters");
+                }
+                boolean isAllergen = "true".equalsIgnoreCase(pick(ingIsAllergen, i));
+                String allergenCode = blankToNull(pick(ingAllergenCode, i));
+                BigDecimal pct = parseDecimalOrNull(pick(ingPercentage, i), "percentage", i + 1);
+                String country = blankToNull(pick(ingOriginCountry, i));
+                if (country != null && country.length() != 2) {
+                    throw new IllegalArgumentException(
+                            "Row " + (i + 1) + ": origin_country must be ISO 3166-1 alpha-2 (2 letters)");
+                }
+                if (isAllergen && (allergenCode == null)) {
+                    throw new IllegalArgumentException(
+                            "Row " + (i + 1) + ": is_allergen is checked but no allergen_code is selected");
+                }
+                if (!isAllergen && allergenCode != null) {
+                    throw new IllegalArgumentException(
+                            "Row " + (i + 1) + ": allergen_code is set but is_allergen is not checked");
+                }
+                if (isAllergen && !AllergenCode.ALL_CODES.contains(allergenCode.toLowerCase())) {
+                    throw new IllegalArgumentException(
+                            "Row " + (i + 1) + ": allergen_code must be one of "
+                                    + AllergenCode.ALL_CODES);
+                }
+                body.add(new AdminIngredientController.IngredientUpsert(
+                        i + 1, name, isAllergen, allergenCode, pct, country));
+            }
+            // Delegate the actual write to the REST controller so the
+            // form path and the REST API share one source of truth.
+            adminIngredients.replaceAll(p, body);
+            if (auth != null) auth.getName();
+            ra.addFlashAttribute("successMessage",
+                    "Ingredients saved for " + key + " (" + body.size() + " rows)");
+            return "redirect:/admin/products/" + key;
+        } catch (RuntimeException e) {
+            List<ProductIngredient> stale = ingredients.findByIdProductIdOrderByIdPositionAsc(p.getId());
+            model.addAttribute("p", p);
+            model.addAttribute("ingredients", stale);
+            model.addAttribute("allergenCodes", AllergenCode.ALL_CODES);
+            model.addAttribute("errorMessage", e.getMessage());
+            return "admin/product-ingredients-form";
+        }
+    }
+
+    private static String pick(java.util.List<String> list, int i) {
+        if (list == null || i >= list.size()) return null;
+        return list.get(i);
+    }
+
+    private static BigDecimal parseDecimalOrNull(String s, String field, int row) {
+        if (s == null || s.isBlank()) return null;
+        try {
+            return new BigDecimal(s);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Row " + row + ": " + field + " is not a number: " + s);
+        }
+    }
+
     private void applyProduct(Product p, String productKey, Long restaurantId, String name,
                               String description, String weightText, Integer weightGrams,
                               String category, String tags, ProductStatus status) {
@@ -902,6 +1134,8 @@ public class AdminViewController {
             case "restaurants" -> restaurantCsv::parse;
             case "menus" -> menuCsv::parse;
             case "products" -> productCsv::parse;
+            case "nutrition" -> nutritionCsv::parse;
+            case "ingredients" -> ingredientsCsv::parse;
             case "menu-items" -> menuItemCsv::parse;
             case "photos" -> photoCsv::parse;
             case "menu-assets" -> menuAssetCsv::parse;

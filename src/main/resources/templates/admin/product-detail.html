@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/_layout :: head('Product: ' + ${p.productKey})}"></head>
+<body>
+<header th:replace="~{admin/_layout :: topbar}"></header>
+<nav th:replace="~{admin/_layout :: nav('products')}"></nav>
+<main>
+    <h2 th:text="'Product: ' + ${p.productKey}"></h2>
+    <p class="muted" th:if="${restaurant != null}">
+        Restaurant: <a th:href="@{'/admin/restaurants/' + ${restaurant.restaurantKey} + '/edit'}"
+                       th:text="${restaurant.name}"></a>
+    </p>
+
+    <h3>Basics</h3>
+    <table style="max-width: 720px;">
+        <tr><td>name</td><td th:text="${p.name}"></td></tr>
+        <tr><td>description</td><td th:text="${p.description} ?: '—'"></td></tr>
+        <tr><td>weight_text</td><td th:text="${p.weightText} ?: '—'"></td></tr>
+        <tr><td>weight_grams</td><td th:text="${p.weightGrams} ?: '—'"></td></tr>
+        <tr><td>category</td><td th:text="${p.category} ?: '—'"></td></tr>
+        <tr><td>tags</td><td th:text="${p.tags} ?: '—'"></td></tr>
+        <tr><td>status</td><td th:text="${p.status}"></td></tr>
+    </table>
+    <div class="toolbar" style="margin: 0.5rem 0 1.5rem;">
+        <a class="secondary" th:href="@{'/admin/products/' + ${p.productKey} + '/edit'}">Edit basics</a>
+    </div>
+
+    <h3>Nutrition
+        <a class="secondary" style="font-size: 0.7em; font-weight: normal;"
+           th:href="@{'/admin/products/' + ${p.productKey} + '/nutrition'}">edit</a>
+    </h3>
+    <div th:if="${nutrition == null}" class="muted">No nutrition data yet.</div>
+    <table th:if="${nutrition != null}" style="max-width: 720px;">
+        <tr><td>basis</td><td th:text="${nutrition.basis}"></td></tr>
+        <tr><td>energy_kcal</td><td th:text="${nutrition.energyKcal} ?: '—'"></td></tr>
+        <tr><td>fat_g / sat_fat_g</td><td><span th:text="${nutrition.fatG} ?: '—'"></span> / <span th:text="${nutrition.satFatG} ?: '—'"></span></td></tr>
+        <tr><td>carbs_g / sugars_g</td><td><span th:text="${nutrition.carbsG} ?: '—'"></span> / <span th:text="${nutrition.sugarsG} ?: '—'"></span></td></tr>
+        <tr><td>protein_g</td><td th:text="${nutrition.proteinG} ?: '—'"></td></tr>
+        <tr><td>salt_g</td><td th:text="${nutrition.saltG} ?: '—'"></td></tr>
+        <tr><td>fiber_g</td><td th:text="${nutrition.fiberG} ?: '—'"></td></tr>
+        <tr><td>source_url</td><td th:text="${nutrition.sourceUrl} ?: '—'"></td></tr>
+        <tr><td>last_verified_at</td><td th:text="${nutrition.lastVerifiedAt} ?: '—'"></td></tr>
+    </table>
+
+    <h3>Ingredients
+        <a class="secondary" style="font-size: 0.7em; font-weight: normal;"
+           th:href="@{'/admin/products/' + ${p.productKey} + '/ingredients'}">edit</a>
+    </h3>
+    <div th:if="${ingredients == null or ingredients.isEmpty()}" class="muted">No ingredients yet.</div>
+    <table th:if="${ingredients != null and !ingredients.isEmpty()}" style="max-width: 720px;">
+        <thead><tr><th>#</th><th>name</th><th>allergen</th><th>%</th><th>origin</th></tr></thead>
+        <tbody>
+        <tr th:each="ing : ${ingredients}">
+            <td th:text="${ing.id.position}"></td>
+            <td th:text="${ing.name}"></td>
+            <td th:text="${ing.isAllergen} ? (${ing.allergenCode} ?: '?') : '—'"></td>
+            <td th:text="${ing.percentage} ?: '—'"></td>
+            <td th:text="${ing.originCountry} ?: '—'"></td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+</body>
+</html>
