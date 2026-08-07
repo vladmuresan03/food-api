@@ -16,6 +16,19 @@ import java.util.Set;
  * assumes that any product whose ingredient list declares an
  * animal-derived allergen is not vegan (and not vegetarian, for the
  * meat/fish groups).</p>
+ *
+ * <p>Meat is not an EU Anex II allergen (chicken, pork, beef are
+ * not allergens under 1169/2011), so the ingredient list alone
+ * cannot tell us whether a product contains meat. The caller passes
+ * the product's tag set (the comma-separated {@code product.tags}
+ * string split into tokens) and we honour the convention:</p>
+ * <ul>
+ *   <li>any tag starting with {@code meat} (e.g. {@code meat},
+ *       {@code meat-chicken}, {@code meat-pork}) excludes both
+ *       vegan and vegetarian</li>
+ *   <li>tag {@code fish} is redundant with the fish allergen code
+ *       but is accepted for symmetry with the meat tags</li>
+ * </ul>
  */
 public final class DietaryClassifier {
 
@@ -44,32 +57,56 @@ public final class DietaryClassifier {
     }
 
     public static Dtos_Dietary classify(List<ProductIngredient> ingredients) {
-        if (ingredients == null || ingredients.isEmpty()) {
-            // No structured list: we cannot claim a dietary preference.
-            return new Dtos_Dietary(false, false, false);
-        }
+        return classify(ingredients, List.of());
+    }
+
+    /**
+     * Variant that also considers the product's tag set (e.g. "meat"
+     * tags for chicken/pork, since meat is not an EU allergen). Pass
+     * {@code List.of()} when the caller has no tag info.
+     */
+    public static Dtos_Dietary classify(List<ProductIngredient> ingredients, List<String> tags) {
         boolean hasMeat = false;
         boolean hasAnimal = false;
         boolean hasGluten = false;
-        for (ProductIngredient i : ingredients) {
-            String code = i.getAllergenCode();
-            if (code == null) {
-                continue;
+        if (ingredients != null) {
+            for (ProductIngredient i : ingredients) {
+                String code = i.getAllergenCode();
+                if (code == null) {
+                    continue;
+                }
+                String norm = code.toLowerCase();
+                if (MEAT_OR_FISH.contains(norm)) {
+                    hasMeat = true;
+                }
+                if (ANIMAL_DERIVED.contains(norm)) {
+                    hasAnimal = true;
+                }
+                if (GLUTEN.contains(norm)) {
+                    hasGluten = true;
+                }
             }
-            String norm = code.toLowerCase();
-            if (MEAT_OR_FISH.contains(norm)) {
-                hasMeat = true;
+        }
+        if (tags != null) {
+            for (String t : tags) {
+                if (t == null) {
+                    continue;
+                }
+                String norm = t.trim().toLowerCase();
+                if (norm.startsWith("meat") || norm.equals("fish")) {
+                    hasMeat = true;
+                    hasAnimal = true;
+                }
             }
-            if (ANIMAL_DERIVED.contains(norm)) {
-                hasAnimal = true;
-            }
-            if (GLUTEN.contains(norm)) {
-                hasGluten = true;
-            }
+        }
+        if ((ingredients == null || ingredients.isEmpty()) && (tags == null || tags.isEmpty())) {
+            // No structured list and no tag info: we cannot claim a
+            // dietary preference.
+            return new Dtos_Dietary(false, false, false);
         }
         return new Dtos_Dietary(
                 !hasAnimal,   // vegan: no animal product at all
-                !hasMeat,     // vegetarian (lacto-ovo): no fish/crust/mollusc
+                !hasMeat,     // vegetarian (lacto-ovo): no fish/crust/mollusc/meat
                 !hasGluten);
     }
 

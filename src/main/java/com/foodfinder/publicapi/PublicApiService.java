@@ -141,7 +141,7 @@ public class PublicApiService {
             Dtos.ImageRef img = (primary == null) ? null
                     : new Dtos.ImageRef(photoContentUrl(primary.getPhotoKey()),
                             thumbnailUrl(primary.getPhotoKey()));
-            ProductEnrichment enrich = loadEnrichment(p.getId());
+            ProductEnrichment enrich = loadEnrichment(p);
             Dtos.Item item = new Dtos.Item(
                     p.getProductKey(), p.getName(), p.getDescription(),
                     mi.getPrice(), mi.getCurrency(), p.getWeightText(),
@@ -267,7 +267,7 @@ public class PublicApiService {
                         ph.getAltText(), ph.isPrimaryPhoto()))
                 .toList();
         Photo primary = photoList.stream().filter(Photo::isPrimaryPhoto).findFirst().orElse(null);
-        ProductEnrichment enrich = loadEnrichment(p.getId());
+        ProductEnrichment enrich = loadEnrichment(p);
         return new Dtos.ProductDetail(
                 p.getProductKey(), p.getName(), p.getDescription(),
                 p.getWeightText(), p.getWeightGrams(), p.getCategory(), p.getTags(),
@@ -284,7 +284,8 @@ public class PublicApiService {
      * paths so the consumer app sees the same shape regardless of which
      * endpoint it hit.
      */
-    private ProductEnrichment loadEnrichment(Long productId) {
+    private ProductEnrichment loadEnrichment(Product p) {
+        Long productId = p.getId();
         ProductNutrition n = nutritions.findById(productId).orElse(null);
         List<ProductIngredient> rows = ingredients.findByIdProductIdOrderByIdPositionAsc(productId);
         Dtos.Nutrition nDto = (n == null) ? null : new Dtos.Nutrition(
@@ -304,9 +305,27 @@ public class PublicApiService {
                         pi.getPercentage(),
                         pi.getOriginCountry()))
                 .toList();
-        DietaryClassifier.Dtos_Dietary d = DietaryClassifier.classify(rows);
+        List<String> tagList = splitTags(p.getTags());
+        DietaryClassifier.Dtos_Dietary d = DietaryClassifier.classify(rows, tagList);
         Dtos.Dietary dDto = new Dtos.Dietary(d.vegan(), d.vegetarian(), d.glutenFree());
         return new ProductEnrichment(nDto, iDtos, dDto);
+    }
+
+    private ProductEnrichment loadEnrichment(Long productId) {
+        // Fallback for callers that have only the id. Tag info is
+        // unknown so dietary classification is ingredient-only.
+        return loadEnrichment(products.findById(productId)
+                .orElseThrow(() -> new NoSuchElementException("Product gone: " + productId)));
+    }
+
+    private static List<String> splitTags(String csv) {
+        if (csv == null || csv.isBlank()) {
+            return List.of();
+        }
+        return java.util.Arrays.stream(csv.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
     }
 
     /** Triple of (nutrition, ingredients, dietary) for a product. */

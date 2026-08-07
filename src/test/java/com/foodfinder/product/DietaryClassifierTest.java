@@ -101,4 +101,42 @@ class DietaryClassifierTest {
         assertThat(d.vegan()).isTrue();
         assertThat(d.vegetarian()).isTrue();
     }
+
+    @Test
+    void meatTagExcludesVeganAndVegetarian() {
+        // Meat is not an EU Anex II allergen (chicken, pork, beef
+        // are not listed in 1169/2011), so the ingredient list alone
+        // cannot tell us about it. The product's tag set has to.
+        var d = DietaryClassifier.classify(
+                List.of(ingredient("Piept de pui file", null)),
+                List.of("meniuri", "meat-chicken"));
+        assertThat(d.vegan()).isFalse();
+        assertThat(d.vegetarian()).isFalse();
+        assertThat(d.glutenFree()).isTrue();
+    }
+
+    @Test
+    void meatTagOverridesIngredientOnlyVegan() {
+        // Even if the ingredients are all plant-based, a "meat" tag
+        // (e.g. the dish includes a meat side that the PDF doesn't
+        // list as a structured ingredient) excludes vegan.
+        var d = DietaryClassifier.classify(
+                List.of(ingredient("Cartofi", null), ingredient("Salată", null)),
+                List.of("meat-pork"));
+        assertThat(d.vegan()).isFalse();
+        assertThat(d.vegetarian()).isFalse();
+    }
+
+    @Test
+    void nullAndEmptyTagsAreEquivalent() {
+        // The caller can pass null or an empty list — both should be
+        // treated as "no tag info".
+        var withNull = DietaryClassifier.classify(
+                List.of(ingredient("Cartofi", null)), (List<String>) null);
+        var withEmpty = DietaryClassifier.classify(
+                List.of(ingredient("Cartofi", null)), List.of());
+        assertThat(withNull.vegan()).isEqualTo(withEmpty.vegan());
+        assertThat(withNull.vegetarian()).isEqualTo(withEmpty.vegetarian());
+        assertThat(withNull.glutenFree()).isEqualTo(withEmpty.glutenFree());
+    }
 }

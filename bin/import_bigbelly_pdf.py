@@ -95,6 +95,10 @@ ALLERGEN_MAP: list[tuple[str, str]] = [
     ("ou integral", "eggs"),
     ("gălbenuș de ou", "eggs"),
     ("gălbenuş de ou", "eggs"),
+    # Short form "ou" appears in the PDF's alergeni column (e.g.
+    # "gluten, ou, lactoză"). Boundary check inside the matching
+    # loop avoids matching the start of "ouă".
+    ("__OU_SHORT__", "eggs"),
     ("pește", "fish"),
     ("anșoa", "fish"),
     ("somon", "fish"),
@@ -184,72 +188,159 @@ def pdf_to_text(pdf: Path) -> str:
     return out.read_text(encoding="utf-8")
 
 
-def extract_ingredients_block(text: str, product_label: str) -> tuple[str, list[str]]:
-    """Find the product row in the PDF text and pull (ingredients_text,
-    list_of_allergen_codes). Returns ('', []) if the product is not
-    in the PDF (e.g. Meniu Mixt, Meniu Turkey Sandwich).
+# Section dividers in the PDF — these mark the end of the MENIURI
+# section (which is the only section we import from).
+SECTION_HEADERS = {"SHAORMA", "BURGERI", "SALATE", "DESERT", "ALTELE",
+                   "GARNITURI", "SOSURI", "BAUTURI"}
+
+
+# Hand-parsed ingredients + allergens for the 9 MENIURI items that
+# are in the Big Belly PDF. The PDF layout is a 4-column table
+# (Produs | INGREDIENTE | ALERGENI | ADITIVI) with column gaps of
+# 3+ spaces and multi-line rows that wrap unpredictably — `pdftotext
+# -layout` produces noise at the column boundaries that no amount of
+# generic regex can untangle cleanly. The values below were
+# transcribed once from the rendered PDF table (the source of truth
+# for EU 1169/2011 disclosure) and committed as data, not code.
+#
+# If the restaurant updates the PDF, re-transcribe the table by
+# hand and bump NUTRITION_RAW + this dict together.
+MENIURI_RAW: dict[str, tuple[str, str]] = {
+    "Meniu Piept De Pui Crocant - 5 Buc.": (
+        "piept de pui crocant (condiment crocant pui (făină porumb, "
+        "făină Pizza, condiment pui, usturoi granulat, oregano), ouă, "
+        "lapte, făină, ulei de palmier, piept de pui file), cartofi "
+        "congelați (cartof, ulei de floarea-soarelui)",
+        "gluten, ou, lactoză",
+    ),
+    "Meniu Piept De Pui Crocant - 7 Buc.": (
+        "piept de pui crocant (condiment crocant pui (făină porumb, "
+        "făină Pizza, condiment pui, usturoi granulat, oregano), ouă, "
+        "lapte, făină, ulei de palmier, piept de pui file), cartofi "
+        "congelați (cartof, ulei de floarea-soarelui)",
+        "gluten, ou, lactoză",
+    ),
+    "Meniu Bbq Ribs Pack": (
+        "costițe de porc la cuptor, cartofi în coajă, ceapă verde, "
+        "Sos barbeque (piure de roșii 52%, zahăr, oțet din vin alb, "
+        "melasă, amidon modificat de porumb, sare, Sos worcestershire "
+        "(apă, sirop de glucoză, oțet din malț (orz), zahăr, sare, "
+        "arome, extract de ceapă, anșoa, ulei vegetal de măsline, "
+        "oțet din vin alb, suc concentrat de lămâie, condimente, "
+        "ulei vegetal de floarea soarelui), aromă de fum, ulei vegetal "
+        "de floarea soarelui, condimente, făină de muștar, ceapă pudră "
+        "afumată, agent de îngroșare (E415 gumă de xanthan), "
+        "conservant (E200 acid sorbic), arome), mix salată, dressing "
+        "vinegretă (ulei de măsline, miere, condiment verdețuri "
+        "italiene (ulei vegetal (ulei vegetal de floarea-soarelui, "
+        "ulei vegetal de plamier hidrogenat), 17% legume (pastă de "
+        "tomate, roșii, ceapă), 11% ierburi (busuioc, oregano, "
+        "rozmarin), sare, potențiator de aromă (E621 monoglutamat de "
+        "sodiu), zahăr, condimente (pudră de usturoi, semințe de "
+        "fenicul), semințe de pin, sambal oelek (chilli, apă, sare, "
+        "oțet, amidon modificat), extract natural de paprika, "
+        "antioxidant E306), lămâie, muștar dijon (apă, muștar - 28%, "
+        "oțet, sare, regulator de aciditate E330 acid citric, "
+        "antioxidant E224 metabisulfit de potasiu (conține dioxid de "
+        "sulf))",
+        "gluten, pește, muștar",
+    ),
+    "Meniu Mixt Cașcaval": (
+        "cașcaval pane (crustă pane (pesmet (făină de grâu, sare, "
+        "drojdie, colorant extract de ardei roșu), apă, făină de "
+        "grâu, sare, amestec de ardei roșu (praf de ardei, extract de "
+        "ardei), cașcaval trapist 38%, apă, ulei de floarea-soarelui, "
+        "amidon de porumb), piept de pui crocant (condiment crocant "
+        "pui (făină porumb, făină Pizza, condiment pui, usturoi "
+        "granulat, oregano), ouă, lapte, făină, ulei de palmier, "
+        "piept de pui file), cartofi congelați (cartof, ulei de "
+        "floarea-soarelui)",
+        "lactoză, gluten, ou",
+    ),
+    "Meniu Grătar": (
+        "ceafă de porc, piept de pui file, cartofi curățați, "
+        "condiment grătar NDk (sare, usturoi, condimente (boia, piper "
+        "negru, scorțișoară, fenicul), corectori de aciditate E262, "
+        "acetat de sodiu, E500, carbonat de sodiu, E331 citrat de "
+        "sodiu, hidrolizat proteic vegetal, zahăr, extract de "
+        "drojdie, aromă naturală, arome (conține gluten din grâu), "
+        "antioxidant E301 ascorbat de sodiu, extract de condimente "
+        "(coriandru, chimion, usturoi, chimen), salată de varză "
+        "(varză, zahăr, ulei de măsline, piper, sare, oțet), roșii, "
+        "castraveți, morcovi",
+        "gluten",
+    ),
+    "Meniu Cașcaval": (
+        "cașcaval pane (crustă pane (pesmet (făină de grâu, sare, "
+        "drojdie, colorant extract de ardei roșu), apă, făină de "
+        "grâu, sare, amestec de ardei roșu (praf de ardei, extract de "
+        "ardei), cașcaval trapist 38%, apă, ulei de floarea-soarelui, "
+        "amidon de porumb), cartofi congelați (cartof, ulei de "
+        "floarea-soarelui), salată de varză (varză, zahăr, ulei de "
+        "măsline, piper, sare, oțet), roșii, castraveți",
+        "gluten, lactoză",
+    ),
+    "Meniu Aripioare": (
+        "aripi, condiment pui crocant (făină porumb, făină Pizza, "
+        "condiment pui, usturoi granulat, oregano), cartofi congelați "
+        "(cartof, ulei de floarea-soarelui)",
+        "gluten",
+    ),
+    "Meniu Pulpe De Pui": (
+        "pulpe de pui inferioare, condiment pui crocant (făină "
+        "porumb, făină Pizza, condiment pui, usturoi granulat, "
+        "oregano), cartofi congelați (cartof, ulei de floarea-soarelui)",
+        "gluten",
+    ),
+    "Meniu Vegetarian": (
+        "pârjoale vegetale (boabe de soia hidratate, pane (făină de "
+        "grâu, sare, drojdie, condimente, apă), proteină vegetală "
+        "din soia, ulei vegetal de floarea-soarelui, fibră de mazare, "
+        "amidon de cartofi, ceapă, fibră de soia, sare, usturoi, "
+        "mărar, pătrunjel, piper), cartofi congelați (cartof, ulei "
+        "de floarea-soarelui), salată de varză (varză, zahăr, ulei "
+        "de măsline, piper, sare, oțet), roșii, castraveți",
+        "soia, gluten",
+    ),
+}
+
+
+def parse_meniuri_section(text: str) -> dict[str, tuple[str, str]]:
+    """Return the hand-transcribed MENIURI section data.
+
+    The function takes the full PDF text (for API symmetry with a
+    real parser) but ignores it — the structured data is committed
+    as a constant above because ``pdftotext -layout`` cannot reliably
+    recover the 4-column table structure of this particular PDF.
+    See ``MENIURI_RAW`` for the rationale and the source data.
     """
-    # The PDF keeps the same row across multiple lines until the next
-    # product label. The product label sits at the leftmost column.
-    # We split on lines that look like new product labels.
-    lines = text.splitlines()
-    # Find the start line for our product
-    start = None
-    for i, line in enumerate(lines):
-        s = line.lstrip()
-        if s.startswith(product_label):
-            # Make sure this is a real product row, not a noise line
-            # (the labels are at column 0, with whitespace-padded columns
-            # for ingrediente/alergeni/aditivi to the right).
-            if re.match(rf"^{re.escape(product_label)}\s{{3,}}\S", line):
-                start = i
-                break
-    if start is None:
+    return dict(MENIURI_RAW)
+
+
+def extract_ingredients_block(text: str, product_label: str) -> tuple[str, list[str]]:
+    """Find the product row in the parsed MENIURI section and pull
+    (ingredients_text, list_of_allergen_codes). Returns ('', []) if
+    the product is not in the PDF (e.g. Meniu Mixt, Meniu Turkey
+    Sandwich)."""
+    blocks = parse_meniuri_section(text)
+    if product_label not in blocks:
         return "", []
-
-    # Find the next product label. Heuristic: a line that starts with
-    # one of the product names in PDF_NAME_MAP (right-padded by 3+ spaces)
-    # OR a section divider like "MENIURI", "SHAORMA", "BURGERI", etc.
-    next_starts = []
-    for label in PDF_NAME_MAP.values():
-        if not label:
-            continue
-        # Search forward for the next occurrence of any other product label
-        for j in range(start + 1, len(lines)):
-            if re.match(rf"^{re.escape(label)}\s{{3,}}\S", lines[j]):
-                next_starts.append(j)
-                break
-    # Section dividers (all caps words) are also row terminators
-    for j in range(start + 1, len(lines)):
-        if re.match(r"^[A-ZĂÂÎȘȚ][A-ZĂÂÎȘȚ ]{2,}\s*$", lines[j].strip()):
-            next_starts.append(j)
-    end = min(next_starts) if next_starts else len(lines)
-    block = "\n".join(lines[start:end])
-
-    # The 4 columns are: Produs | INGREDIENTE | ALERGENI | ADITIVI.
-    # On a multi-line row, the columns are spread across lines. The
-    # text wraps with column boundaries preserved by pdftotext.
-    # Extract: take everything between the product name and the first
-    # empty (no-ingredient) marker like "nu sunt" in the alergeni
-    # column. The alergeni list is the part of the block after the
-    # last column that doesn't belong to ingrediente text.
-
-    # Split into lines, collect non-empty lines after the product line
-    rest = [l for l in lines[start + 1:end] if l.strip()]
-    full_text = " ".join(rest)
-    # The alergeni list is typically a short comma-separated phrase
-    # at the right. Split on the last occurrence of known allergen
-    # pattern and then on "nu sunt" / "conservant" boundary.
-    # Approach: extract everything between the LAST ")" or ">" of
-    # ingrediente and either "nu sunt" or end of block.
-    # For simplicity: alergeni are all tokens from ALLERGEN_MAP that
-    # appear in the full block, deduped and ordered.
-    found = set()
-    block_lower = block.lower()
+    ing_text, alg_text = blocks[product_label]
+    # Detect allergens by token presence in the alergeni column.
+    found: set[str] = set()
+    alg_lower = alg_text.lower()
     for token, code in ALLERGEN_MAP:
-        if token in block_lower:
+        if token == "__OU_SHORT__":
+            # Short form "ou" in the PDF (e.g. "gluten, ou, lactoză").
+            # Word-boundary match so it doesn't fire on the start of
+            # "ouă". If "ouă" is already in the alergeni text, the
+            # dedicated token above already covered it.
+            if re.search(r"\bou\b", alg_lower):
+                found.add(code)
+            continue
+        if token in alg_lower:
             found.add(code)
-    return full_text, sorted(found)
+    return ing_text, sorted(found)
 
 
 def split_ingredient_names(text: str) -> list[str]:
@@ -337,6 +428,34 @@ def build_csvs(items: list[dict[str, Any]], pdf_text: str, out_dir: Path) \
                     "origin_country": "",
                 })
             stats["ingredients_total"] += len(names)
+
+        # The PDF declares allergens at the product level (e.g. "gluten,
+        # ou, lactoză" for Meniu Piept De Pui Crocant). Most of those
+        # allergens live inside composite ingredients — e.g. the
+        # ingrediente "piept de pui crocant (..., ouă, lapte, făină, ...)"
+        # contains allergens as sub-components, not as the ingredient's
+        # own name. Without further help, DietaryClassifier sees
+        # is_allergen=false on every row and concludes the product is
+        # vegan/vegetarian/gluten-free, which is wrong.
+        #
+        # Fix: append a pseudo-ingredient per declared allergen code.
+        # The consumer UI sees it as "Conține: gluten" — slightly
+        # redundant with the PDF but explicit, and it makes the
+        # classification correct.
+        if allergens:
+            start_pos = len(ingredients_rows) + 1
+            for offset, code in enumerate(allergens):
+                ingredients_rows.append({
+                    "product_key": product_key,
+                    "position": str(start_pos + offset),
+                    "name": f"Conține: {code}",
+                    "is_allergen": "true",
+                    "allergen_code": code,
+                    "percentage": "",
+                    "origin_country": "",
+                })
+            stats["allergens_total"] = max(stats["allergens_total"],
+                                           len(allergens))
 
         if pdf_label in NUTRITION_RAW:
             n = NUTRITION_RAW[pdf_label]
