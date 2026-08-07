@@ -15,7 +15,7 @@ ALTER TABLE product
     ADD COLUMN weight_grams  INT;
 
 ALTER TABLE menu_item
-    ADD COLUMN spice_level   INT;
+    ADD COLUMN spice_level   SMALLINT;
 
 ALTER TABLE product
     ADD CONSTRAINT ck_product_weight_grams
