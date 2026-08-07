@@ -23,6 +23,19 @@
     </table>
     <div class="toolbar" style="margin: 0.5rem 0 1.5rem;">
         <a class="secondary" th:href="@{'/admin/products/' + ${p.productKey} + '/edit'}">Edit basics</a>
+        <form th:if="${p.status.name() != 'ARCHIVED'}"
+              th:action="@{'/admin/products/' + ${p.productKey} + '/archive'}"
+              method="post" style="display:inline;">
+            <button type="submit" class="secondary"
+                    onclick="return confirm('Archive this product? It will no longer be visible to consumers.')">Archive</button>
+        </form>
+        <form th:action="@{'/admin/products/' + ${p.productKey} + '/hard-delete'}"
+              method="post" style="display:inline;">
+            <button type="submit"
+                    style="background:#991b1b;color:white;border:0;cursor:pointer;padding:0.4rem 0.8rem;border-radius:0.3rem;"
+                    title="Cascades to menu_items, photos, nutrition, ingredients"
+                    onclick="return confirm('PERMANENTLY delete product ' + [[${p.productKey}]] + '? This CASCADES to menu_items, photos, nutrition, ingredients. THIS CANNOT BE UNDONE.')">Delete (hard)</button>
+        </form>
     </div>
 
     <h3>Nutrition

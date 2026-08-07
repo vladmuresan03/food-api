@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -98,6 +99,19 @@ public class AdminMenuController {
     private Menu loadOrThrow(String key) {
         return menus.findByMenuKey(key)
                 .orElseThrow(() -> new NoSuchElementException("Menu not found: " + key));
+    }
+
+    /**
+     * Hard delete. Cascades to menu_items and menu_assets (V8 FK
+     * CASCADE). Use only when the menu should not exist at all; for
+     * normal "this menu is no longer in season", prefer
+     * {@code PATCH /{key}/status} with status=ARCHIVED.
+     */
+    @DeleteMapping("/{menuKey}")
+    public ResponseEntity<Void> hardDelete(@PathVariable String menuKey) {
+        Menu m = loadOrThrow(menuKey);
+        menus.delete(m);
+        return ResponseEntity.noContent().build();
     }
 
     private void apply(Menu m, MenuUpsert body, Long restaurantId) {

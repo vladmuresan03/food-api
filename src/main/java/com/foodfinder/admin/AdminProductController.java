@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -90,6 +91,20 @@ public class AdminProductController {
     private Product loadOrThrow(String key) {
         return products.findByProductKey(key)
                 .orElseThrow(() -> new NoSuchElementException("Product not found: " + key));
+    }
+
+    /**
+     * Hard delete. Cascades to menu_items, photos, product_nutrition
+     * and product_ingredient (V8 FK CASCADE + V6 FK CASCADE on the
+     * overlays). Use only when the product should not exist at all;
+     * for normal "this product is no longer served", prefer
+     * {@code PATCH /{key}/status} with status=ARCHIVED.
+     */
+    @DeleteMapping("/{productKey}")
+    public ResponseEntity<Void> hardDelete(@PathVariable String productKey) {
+        Product p = loadOrThrow(productKey);
+        products.delete(p);
+        return ResponseEntity.noContent().build();
     }
 
     private void apply(Product p, ProductUpsert body, Long restaurantId) {

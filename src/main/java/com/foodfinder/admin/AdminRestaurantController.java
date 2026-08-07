@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
@@ -101,6 +102,22 @@ public class AdminRestaurantController {
         r.setLatitude(body.latitude());
         r.setLongitude(body.longitude());
         r.setStatus(body.status() == null ? RestaurantStatus.DRAFT : body.status());
+    }
+
+    /**
+     * Hard delete. Cascades through V8's ON DELETE CASCADE FKs to
+     * menus, products, menu_items, photos, menu_assets, plus the
+     * product_nutrition and product_ingredient overlays added in V6.
+     * Use only for GDPR right-to-be-forgotten or accidental-import
+     * cleanup; for normal "this restaurant is closed", prefer
+     * {@code PATCH /{key}/status} with status=ARCHIVED.
+     */
+    @DeleteMapping("/{restaurantKey}")
+    public ResponseEntity<Void> hardDelete(@PathVariable String restaurantKey) {
+        Restaurant r = repository.findByRestaurantKey(restaurantKey)
+                .orElseThrow(() -> new NoSuchElementException("Restaurant not found: " + restaurantKey));
+        repository.delete(r);
+        return ResponseEntity.noContent().build();
     }
 
     // ------------------------------------------------------------------ DTOs

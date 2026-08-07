@@ -309,6 +309,22 @@ public class AdminViewController {
         return "redirect:/admin/restaurants";
     }
 
+    /**
+     * Hard delete (cascades through V8 FK CASCADE). Use for
+     * GDPR right-to-be-forgotten or accidental-import cleanup; for
+     * normal "closed for business" use the archive button instead.
+     */
+    @PostMapping("/restaurants/{key}/hard-delete")
+    public String hardDeleteRestaurant(@PathVariable("key") String key, Authentication auth,
+                                       RedirectAttributes ra) {
+        Restaurant r = restaurants.findByRestaurantKey(key)
+                .orElseThrow(() -> new NoSuchElementException("Restaurant not found: " + key));
+        restaurants.delete(r);
+        if (auth != null) auth.getName();
+        ra.addFlashAttribute("successMessage", "Restaurant '" + key + "' permanently deleted");
+        return "redirect:/admin/restaurants";
+    }
+
     private static String actor(Authentication auth) {
         return auth == null ? null : auth.getName();
     }
@@ -482,6 +498,22 @@ public class AdminViewController {
         return "redirect:/admin/menus";
     }
 
+    /**
+     * Hard delete (cascades through V8 FK CASCADE to menu_items and
+     * menu_assets). Use for cleanup of mistaken imports; for normal
+     * "out of season" use the archive button instead.
+     */
+    @PostMapping("/menus/{key}/hard-delete")
+    public String hardDeleteMenu(@PathVariable("key") String key, Authentication auth,
+                                 RedirectAttributes ra) {
+        Menu m = menus.findByMenuKey(key)
+                .orElseThrow(() -> new NoSuchElementException("Menu not found: " + key));
+        menus.delete(m);
+        if (auth != null) auth.getName();
+        ra.addFlashAttribute("successMessage", "Menu '" + key + "' permanently deleted");
+        return "redirect:/admin/menus";
+    }
+
     private void applyMenu(Menu m, String menuKey, Long restaurantId, String name,
                            MenuType menuType, MenuStatus status, String sourceUrl,
                            LocalDate validFrom, LocalDate validTo) {
@@ -619,6 +651,23 @@ public class AdminViewController {
         p.setUpdatedBy(actor(auth));
         products.save(p);
         ra.addFlashAttribute("successMessage", "Product '" + key + "' activated");
+        return "redirect:/admin/products";
+    }
+
+    /**
+     * Hard delete (cascades through V8 FK CASCADE to menu_items, photos,
+     * product_nutrition, product_ingredient). Use for cleanup of
+     * mistaken imports; for normal "no longer served" use the archive
+     * button instead.
+     */
+    @PostMapping("/products/{key}/hard-delete")
+    public String hardDeleteProduct(@PathVariable("key") String key, Authentication auth,
+                                    RedirectAttributes ra) {
+        Product p = products.findByProductKey(key)
+                .orElseThrow(() -> new NoSuchElementException("Product not found: " + key));
+        products.delete(p);
+        if (auth != null) auth.getName();
+        ra.addFlashAttribute("successMessage", "Product '" + key + "' permanently deleted");
         return "redirect:/admin/products";
     }
 

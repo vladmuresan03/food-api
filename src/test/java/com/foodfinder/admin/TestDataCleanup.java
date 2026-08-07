@@ -4,6 +4,8 @@ import com.foodfinder.menu.MenuAssetRepository;
 import com.foodfinder.menu.MenuItemRepository;
 import com.foodfinder.menu.MenuRepository;
 import com.foodfinder.photo.PhotoRepository;
+import com.foodfinder.product.ProductIngredientRepository;
+import com.foodfinder.product.ProductNutritionRepository;
 import com.foodfinder.product.ProductRepository;
 import com.foodfinder.restaurant.RestaurantRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +33,8 @@ public class TestDataCleanup {
     @Autowired private MenuItemRepository menuItems;
     @Autowired private MenuAssetRepository menuAssets;
     @Autowired private ProductRepository products;
+    @Autowired private ProductNutritionRepository nutritions;
+    @Autowired private ProductIngredientRepository ingredients;
     @Autowired private PhotoRepository photos;
     @Autowired private CsvImportLogRepository importLog;
 
@@ -40,6 +44,8 @@ public class TestDataCleanup {
         menuItems.deleteAllInBatch();
         menuAssets.deleteAllInBatch();
         photos.deleteAllInBatch();
+        nutritions.deleteAllInBatch();
+        ingredients.deleteAllInBatch();
         products.deleteAllInBatch();
         menus.deleteAllInBatch();
         restaurants.deleteAllInBatch();
