@@ -132,6 +132,8 @@ public class PublicApiService {
             Dtos.Item item = new Dtos.Item(
                     p.getProductKey(), p.getName(), p.getDescription(),
                     mi.getPrice(), mi.getCurrency(), p.getWeightText(),
+                    p.getWeightGrams(), p.getCategory(), p.getTags(),
+                    mi.getSpiceLevel(),
                     mi.isAvailable(), img);
             grouped.computeIfAbsent(mi.getSectionName(), k -> new java.util.ArrayList<>()).add(item);
         }
@@ -253,7 +255,7 @@ public class PublicApiService {
         Photo primary = photoList.stream().filter(Photo::isPrimaryPhoto).findFirst().orElse(null);
         return new Dtos.ProductDetail(
                 p.getProductKey(), p.getName(), p.getDescription(),
-                p.getWeightText(),
+                p.getWeightText(), p.getWeightGrams(), p.getCategory(), p.getTags(),
                 p.getStatus() == null ? null : p.getStatus().name(),
                 new Dtos.RestaurantRef(r.getRestaurantKey(), r.getName()),
                 appearances, photoDtos,
@@ -274,7 +276,9 @@ public class PublicApiService {
                 p.getProductKey(), p.getName(),
                 r == null ? "" : r.getRestaurantKey(),
                 r == null ? "" : r.getName(),
-                section, price, currency, p.getWeightText(), available, hasPhoto,
+                section, price, currency, p.getWeightText(),
+                p.getWeightGrams(), p.getCategory(), p.getTags(),
+                available, hasPhoto,
                 primary == null ? null : thumbnailUrl(primary.getPhotoKey()));
     }
 

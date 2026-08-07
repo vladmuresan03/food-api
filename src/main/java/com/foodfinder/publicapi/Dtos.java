@@ -70,6 +70,10 @@ public final class Dtos {
             BigDecimal price,
             String currency,
             String weight,
+            Integer weightGrams,
+            String category,
+            String tags,
+            Integer spiceLevel,
             boolean available,
             ImageRef image) {
     }
@@ -88,6 +92,9 @@ public final class Dtos {
             BigDecimal price,
             String currency,
             String weight,
+            Integer weightGrams,
+            String category,
+            String tags,
             boolean available,
             boolean hasPhoto,
             String thumbnailUrl) {
@@ -98,6 +105,9 @@ public final class Dtos {
             String name,
             String description,
             String weight,
+            Integer weightGrams,
+            String category,
+            String tags,
             String status,
             RestaurantRef restaurant,
             List<MenuAppearance> menuAppearances,

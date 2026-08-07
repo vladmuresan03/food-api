@@ -113,6 +113,7 @@ public class AdminMenuItemController {
         mi.setCurrency(body.currency() == null || body.currency().isBlank() ? "RON" : body.currency());
         mi.setAvailable(body.available() == null ? true : body.available());
         mi.setSortOrder(body.sortOrder() == null ? 0 : body.sortOrder());
+        mi.setSpiceLevel(body.spiceLevel());
     }
 
     public record MenuItemUpsert(
@@ -122,19 +123,20 @@ public class AdminMenuItemController {
             BigDecimal price,
             String currency,
             Boolean available,
-            Integer sortOrder) {
+            Integer sortOrder,
+            Integer spiceLevel) {
     }
 
     public record MenuItemView(
             Long id, String menuKey, String productKey, Long restaurantId,
             String sectionName, BigDecimal price, String currency,
-            boolean available, int sortOrder) {
+            boolean available, int sortOrder, Integer spiceLevel) {
         static MenuItemView of(MenuItem mi, MenuRepository menus, ProductRepository products) {
             String menuKey = menus.findById(mi.getMenuId()).map(m -> m.getMenuKey()).orElse("");
             String productKey = products.findById(mi.getProductId()).map(p -> p.getProductKey()).orElse("");
             return new MenuItemView(mi.getId(), menuKey, productKey, mi.getRestaurantId(),
                     mi.getSectionName(), mi.getPrice(), mi.getCurrency(),
-                    mi.isAvailable(), mi.getSortOrder());
+                    mi.isAvailable(), mi.getSortOrder(), mi.getSpiceLevel());
         }
     }
 }

@@ -74,6 +74,45 @@
                 </td>
             </tr>
             <tr>
+                <td><label for="weightGrams">weight_grams</label></td>
+                <td>
+                    <input id="weightGrams" name="weightGrams" type="number" min="1" max="100000" step="1"
+                           th:value="${mode == 'new'}
+                               ? (${form?.weightGrams} ?: '')
+                               : ${p.weightGrams}"
+                           style="width: 200px; padding: 0.4rem;"
+                           placeholder="e.g. 350"/>
+                    <div class="muted">used to display "per 100g" macros once nutrition is attached</div>
+                </td>
+            </tr>
+            <tr>
+                <td><label for="category">category</label></td>
+                <td>
+                    <input id="category" name="category" maxlength="60"
+                           th:value="${mode == 'new'}
+                               ? (${form?.category} ?: '')
+                               : ${p.category}"
+                           style="width: 100%; padding: 0.4rem;"
+                           placeholder="e.g. Pizza, Soup, Drink"/>
+                </td>
+            </tr>
+            <tr>
+                <td><label for="tags">tags</label></td>
+                <td>
+                    <input id="tags" name="tags" maxlength="250"
+                           th:value="${mode == 'new'}
+                               ? (${form?.tags} ?: '')
+                               : ${p.tags}"
+                           style="width: 100%; padding: 0.4rem;"
+                           placeholder="e.g. vegetarian, spicy, gluten-free"/>
+                    <div class="muted">
+                        comma-separated, must be in the allowlist (vegetarian, vegan, gluten-free,
+                        lactose-free, sugar-free, low-sodium, halal, kosher, bio, local, home-made,
+                        fried, grilled, baked, raw, spicy, hot, sweet, sour, smoked)
+                    </div>
+                </td>
+            </tr>
+            <tr>
                 <td><label for="status">status</label></td>
                 <td>
                     <select id="status" name="status" style="padding: 0.4rem;">

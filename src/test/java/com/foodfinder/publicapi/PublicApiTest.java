@@ -135,4 +135,39 @@ class PublicApiTest {
                 .andExpect(jsonPath("$[?(@.key=='pub-pasta')]").exists())
                 .andExpect(jsonPath("$[?(@.key=='pub-archived')]").doesNotExist());
     }
+
+    @Test
+    void menuDetailExposesTier1BFields() throws Exception {
+        // Seed a product with the V4 metadata fields, then a menu_item with spice_level,
+        // and verify the public menu API surfaces all of them.
+        productCsv.parse(new StringReader("""
+                product_key,restaurant_key,name,weight_grams,category,tags,status
+                pub-pizza-meta,pub-r1,Pizza Meta,400,Pizza,"spicy,vegetarian",ACTIVE
+                """), false);
+        menuItemCsv.parse(new StringReader("""
+                menu_key,product_key,section_name,price,currency,available,sort_order,spice_level
+                pub-r1-main,pub-pizza-meta,Pizza,32.00,RON,true,5,2
+                """), false);
+
+        mvc.perform(get("/api/menus/pub-r1-main"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sections[?(@.name=='Pizza')].items[0].weightGrams").value(400))
+                .andExpect(jsonPath("$.sections[?(@.name=='Pizza')].items[0].category").value("Pizza"))
+                .andExpect(jsonPath("$.sections[?(@.name=='Pizza')].items[0].tags").value("spicy,vegetarian"))
+                .andExpect(jsonPath("$.sections[?(@.name=='Pizza')].items[0].spiceLevel").value(2));
+    }
+
+    @Test
+    void productDetailExposesTier1BFields() throws Exception {
+        productCsv.parse(new StringReader("""
+                product_key,restaurant_key,name,weight_grams,category,tags,status
+                pub-detail-meta,pub-r1,Detail Meta,250,Soup,vegan,ACTIVE
+                """), false);
+
+        mvc.perform(get("/api/products/pub-detail-meta"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.weightGrams").value(250))
+                .andExpect(jsonPath("$.category").value("Soup"))
+                .andExpect(jsonPath("$.tags").value("vegan"));
+    }
 }

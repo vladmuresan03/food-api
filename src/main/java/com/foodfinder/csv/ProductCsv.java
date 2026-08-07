@@ -23,7 +23,7 @@ public class ProductCsv {
 
     static final String[] HEADERS = {
             "product_key", "restaurant_key", "name", "description",
-            "weight_text", "status"
+            "weight_text", "weight_grams", "category", "tags", "status"
     };
     private static final Set<String> ALLOWED = Set.of(HEADERS);
 
@@ -112,6 +112,9 @@ public class ProductCsv {
                 p.setName(name);
                 p.setDescription(CsvSupport.cell(record, "description"));
                 p.setWeightText(CsvSupport.cell(record, "weight_text"));
+                p.setWeightGrams(parsePositiveInt(CsvSupport.cell(record, "weight_grams"), "weight_grams"));
+                p.setCategory(blankToNull(CsvSupport.cell(record, "category")));
+                p.setTags(blankToNull(CsvSupport.cell(record, "tags")));
                 p.setStatus(status);
                 pending.add(p);
             }
@@ -149,8 +152,30 @@ public class ProductCsv {
                         p.getName(),
                         p.getDescription(),
                         p.getWeightText(),
+                        p.getWeightGrams(),
+                        p.getCategory(),
+                        p.getTags(),
                         p.getStatus() == null ? "" : p.getStatus().name());
             }
+        }
+    }
+
+    private static String blankToNull(String s) {
+        return s == null || s.isBlank() ? null : s;
+    }
+
+    private static Integer parsePositiveInt(String cell, String field) {
+        if (cell == null || cell.isBlank()) {
+            return null;
+        }
+        try {
+            int v = Integer.parseInt(cell.trim());
+            if (v <= 0) {
+                throw new IllegalArgumentException(field + " must be positive: " + cell);
+            }
+            return v;
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(field + " must be an integer: " + cell);
         }
     }
 }

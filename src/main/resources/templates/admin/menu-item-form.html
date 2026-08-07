@@ -89,6 +89,23 @@
                            style="padding: 0.4rem; width: 100px;"/>
                 </td>
             </tr>
+            <tr>
+                <td><label for="spiceLevel">spice_level</label></td>
+                <td>
+                    <select id="spiceLevel" name="spiceLevel" style="padding: 0.4rem; min-width: 180px;">
+                        <option value="">-- unknown --</option>
+                        <option th:each="i : ${#numbers.sequence(0,3)}"
+                                th:value="${i}"
+                                th:selected="${mode == 'new'}
+                                    ? false
+                                    : ${mi.spiceLevel != null and i == mi.spiceLevel}"
+                                th:text="${i == 0} ? '0 (none)'
+                                    : (${i == 1} ? '1 (mild)'
+                                    : (${i == 2} ? '2 (medium)' : '3 (hot)'))">
+                        </option>
+                    </select>
+                </td>
+            </tr>
             <tr th:if="${mode == 'new'}">
                 <td><label for="available">available</label></td>
                 <td>

@@ -27,7 +27,7 @@ public class MenuItemCsv {
 
     static final String[] HEADERS = {
             "menu_key", "product_key", "section_name", "price",
-            "currency", "available", "sort_order",
+            "currency", "available", "sort_order", "spice_level",
             // legacy column kept for compatibility with earlier exports;
             // ignored on import (MenuItem has no source_url field):
             "source_url"
@@ -161,6 +161,7 @@ public class MenuItemCsv {
                 mi.setCurrency(currency);
                 mi.setAvailable(available);
                 mi.setSortOrder(sortOrder == null ? 0 : sortOrder);
+                mi.setSpiceLevel(parseSpiceLevel(CsvSupport.cell(record, "spice_level")));
                 pending.add(mi);
             }
         }
@@ -203,8 +204,24 @@ public class MenuItemCsv {
                         mi.getCurrency(),
                         mi.isAvailable(),
                         mi.getSortOrder(),
+                        mi.getSpiceLevel() == null ? "" : mi.getSpiceLevel().toString(),
                         "");
             }
+        }
+    }
+
+    private static Integer parseSpiceLevel(String cell) {
+        if (cell == null || cell.isBlank()) {
+            return null;
+        }
+        try {
+            int v = Integer.parseInt(cell.trim());
+            if (v < 0 || v > 3) {
+                throw new IllegalArgumentException("spice_level must be 0..3: " + cell);
+            }
+            return v;
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("spice_level must be an integer: " + cell);
         }
     }
 }

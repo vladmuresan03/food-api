@@ -39,7 +39,10 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 /**
  * Server-rendered admin pages. Form-login + Basic auth (configured in
@@ -505,21 +508,35 @@ public class AdminViewController {
                                 @RequestParam String name,
                                 @RequestParam(required = false) String description,
                                 @RequestParam(required = false) String weightText,
+                                @RequestParam(required = false) Integer weightGrams,
+                                @RequestParam(required = false) String category,
+                                @RequestParam(required = false) String tags,
                                 @RequestParam(required = false) ProductStatus status,
                                 Authentication auth,
-                                RedirectAttributes ra) {
-        if (products.existsByProductKey(productKey)) {
-            throw new AdminConflictException("product_key already exists: " + productKey);
+                                RedirectAttributes ra, Model model) {
+        try {
+            if (products.existsByProductKey(productKey)) {
+                throw new AdminConflictException("product_key already exists: " + productKey);
+            }
+            Long restaurantId = restaurants.findByRestaurantKey(restaurantKey)
+                    .orElseThrow(() -> new NoSuchElementException("Unknown restaurant_key: " + restaurantKey))
+                    .getId();
+            Product p = new Product();
+            applyProduct(p, productKey, restaurantId, name, description, weightText,
+                    weightGrams, category, tags, status);
+            p.setUpdatedBy(actor(auth));
+            products.save(p);
+            ra.addFlashAttribute("successMessage", "Product '" + p.getProductKey() + "' created");
+            return "redirect:/admin/products";
+        } catch (RuntimeException e) {
+            model.addAttribute("mode", "new");
+            model.addAttribute("statuses", ProductStatus.values());
+            model.addAttribute("restaurants", views.listRestaurants(null, null, null));
+            model.addAttribute("form", new ProductForm(productKey, restaurantKey, name,
+                    description, weightText, weightGrams, category, tags, status));
+            model.addAttribute("errorMessage", e.getMessage());
+            return "admin/product-form";
         }
-        Long restaurantId = restaurants.findByRestaurantKey(restaurantKey)
-                .orElseThrow(() -> new NoSuchElementException("Unknown restaurant_key: " + restaurantKey))
-                .getId();
-        Product p = new Product();
-        applyProduct(p, productKey, restaurantId, name, description, weightText, status);
-        p.setUpdatedBy(actor(auth));
-        products.save(p);
-        ra.addFlashAttribute("successMessage", "Product '" + p.getProductKey() + "' created");
-        return "redirect:/admin/products";
     }
 
     @PostMapping("/products/{key}")
@@ -528,19 +545,34 @@ public class AdminViewController {
                                 @RequestParam String name,
                                 @RequestParam(required = false) String description,
                                 @RequestParam(required = false) String weightText,
+                                @RequestParam(required = false) Integer weightGrams,
+                                @RequestParam(required = false) String category,
+                                @RequestParam(required = false) String tags,
                                 @RequestParam(required = false) ProductStatus status,
                                 Authentication auth,
-                                RedirectAttributes ra) {
+                                RedirectAttributes ra, Model model) {
         Product p = products.findByProductKey(key)
                 .orElseThrow(() -> new NoSuchElementException("Product not found: " + key));
-        Long restaurantId = restaurants.findByRestaurantKey(restaurantKey)
-                .orElseThrow(() -> new NoSuchElementException("Unknown restaurant_key: " + restaurantKey))
-                .getId();
-        applyProduct(p, key, restaurantId, name, description, weightText, status);
-        p.setUpdatedBy(actor(auth));
-        products.save(p);
-        ra.addFlashAttribute("successMessage", "Product '" + p.getProductKey() + "' updated");
-        return "redirect:/admin/products";
+        try {
+            Long restaurantId = restaurants.findByRestaurantKey(restaurantKey)
+                    .orElseThrow(() -> new NoSuchElementException("Unknown restaurant_key: " + restaurantKey))
+                    .getId();
+            applyProduct(p, key, restaurantId, name, description, weightText,
+                    weightGrams, category, tags, status);
+            p.setUpdatedBy(actor(auth));
+            products.save(p);
+            ra.addFlashAttribute("successMessage", "Product '" + p.getProductKey() + "' updated");
+            return "redirect:/admin/products";
+        } catch (RuntimeException e) {
+            model.addAttribute("mode", "edit");
+            model.addAttribute("p", p);
+            model.addAttribute("statuses", ProductStatus.values());
+            model.addAttribute("restaurants", views.listRestaurants(null, null, null));
+            model.addAttribute("form", new ProductForm(key, restaurantKey, name, description,
+                    weightText, weightGrams, category, tags, status));
+            model.addAttribute("errorMessage", e.getMessage());
+            return "admin/product-form";
+        }
     }
 
     @PostMapping("/products/{key}/archive")
@@ -568,7 +600,8 @@ public class AdminViewController {
     }
 
     private void applyProduct(Product p, String productKey, Long restaurantId, String name,
-                              String description, String weightText, ProductStatus status) {
+                              String description, String weightText, Integer weightGrams,
+                              String category, String tags, ProductStatus status) {
         if (productKey == null || productKey.isBlank()) {
             throw new IllegalArgumentException("product_key is required");
         }
@@ -578,12 +611,85 @@ public class AdminViewController {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("name is required");
         }
+        if (weightGrams != null && (weightGrams < 1 || weightGrams > 100000)) {
+            throw new IllegalArgumentException(
+                    "weight_grams must be between 1 and 100000: " + weightGrams);
+        }
+        String trimmedCategory = blankToNull(category);
+        if (trimmedCategory != null && trimmedCategory.length() > 60) {
+            throw new IllegalArgumentException(
+                    "category must be at most 60 characters: " + trimmedCategory);
+        }
+        String normalizedTags = normalizeTags(tags);
         p.setProductKey(productKey);
         p.setRestaurantId(restaurantId);
         p.setName(name);
         p.setDescription(blankToNull(description));
         p.setWeightText(blankToNull(weightText));
+        p.setWeightGrams(weightGrams);
+        p.setCategory(trimmedCategory);
+        p.setTags(normalizedTags);
         p.setStatus(status == null ? ProductStatus.DRAFT : status);
+    }
+
+    /**
+     * Canonical tag allowlist for the {@code product.tags} column. Kept here
+     * (not in the DB) so it can grow without a Flyway migration. The CSV
+     * importer and the form both go through the same gate, so a typo cannot
+     * pollute the index in {@code ix_product_category} or the public API
+     * filter values.
+     */
+    static final Set<String> ALLOWED_TAGS = Set.of(
+            // dietary
+            "vegetarian", "vegan", "gluten-free", "lactose-free", "sugar-free", "low-sodium",
+            // religious
+            "halal", "kosher",
+            // sourcing
+            "bio", "local", "home-made",
+            // preparation / flavor
+            "fried", "grilled", "baked", "raw", "spicy", "hot", "sweet", "sour", "smoked"
+    );
+
+    /**
+     * Comma-separated -> normalized, deduplicated, lowercased string. Throws
+     * {@link IllegalArgumentException} listing the offending tag if the user
+     * submitted anything outside {@link #ALLOWED_TAGS}. Returns {@code null}
+     * for blank/null input (column is nullable).
+     */
+    static String normalizeTags(String tags) {
+        if (tags == null || tags.isBlank()) {
+            return null;
+        }
+        List<String> valid = new ArrayList<>();
+        for (String raw : tags.split(",")) {
+            String t = raw.trim().toLowerCase();
+            if (t.isEmpty()) {
+                continue;
+            }
+            if (!ALLOWED_TAGS.contains(t)) {
+                throw new IllegalArgumentException(
+                        "tag '" + t + "' is not in the allowlist; allowed: " + ALLOWED_TAGS);
+            }
+            if (!valid.contains(t)) {
+                valid.add(t);
+            }
+        }
+        if (valid.isEmpty()) {
+            return null;
+        }
+        return String.join(",", valid);
+    }
+
+    public record ProductForm(
+            String productKey,
+            String restaurantKey,
+            String name,
+            String description,
+            String weightText,
+            Integer weightGrams,
+            String category,
+            String tags,
+            ProductStatus status) {
     }
 
     // ------------------------------------------------------------------ menu-item CRUD
@@ -617,6 +723,7 @@ public class AdminViewController {
                                  @RequestParam(required = false) String currency,
                                  @RequestParam(required = false) Boolean available,
                                  @RequestParam(required = false) Integer sortOrder,
+                                 @RequestParam(required = false) Integer spiceLevel,
                                  Authentication auth,
                                  RedirectAttributes ra, Model model) {
         try {
@@ -629,6 +736,7 @@ public class AdminViewController {
             if (price != null && price.signum() < 0) {
                 throw new IllegalArgumentException("price must not be negative");
             }
+            validateSpiceLevel(spiceLevel);
             Long menuId = menus.findByMenuKey(menuKey)
                     .orElseThrow(() -> new NoSuchElementException("Unknown menu_key: " + menuKey)).getId();
             Long productId = products.findByProductKey(productKey)
@@ -652,6 +760,7 @@ public class AdminViewController {
             mi.setCurrency(currency == null || currency.isBlank() ? "RON" : currency.toUpperCase());
             mi.setAvailable(available == null ? true : available);
             mi.setSortOrder(sortOrder == null ? 0 : sortOrder);
+            mi.setSpiceLevel(spiceLevel);
             mi.setUpdatedBy(actor(auth));
             menuItems.save(mi);
             ra.addFlashAttribute("successMessage",
@@ -678,6 +787,7 @@ public class AdminViewController {
                                  @RequestParam(required = false) String currency,
                                  @RequestParam(required = false) Boolean available,
                                  @RequestParam(required = false) Integer sortOrder,
+                                 @RequestParam(required = false) Integer spiceLevel,
                                  Authentication auth,
                                  RedirectAttributes ra) {
         MenuItem mi = menuItems.findById(id)
@@ -688,15 +798,24 @@ public class AdminViewController {
         if (price != null && price.signum() < 0) {
             throw new IllegalArgumentException("price must not be negative");
         }
+        validateSpiceLevel(spiceLevel);
         mi.setSectionName(sectionName);
         mi.setPrice(price);
         mi.setCurrency(currency == null || currency.isBlank() ? "RON" : currency.toUpperCase());
         mi.setAvailable(available == null ? mi.isAvailable() : available);
         mi.setSortOrder(sortOrder == null ? mi.getSortOrder() : sortOrder);
+        mi.setSpiceLevel(spiceLevel);
         mi.setUpdatedBy(actor(auth));
         menuItems.save(mi);
         ra.addFlashAttribute("successMessage", "Menu item updated");
         return "redirect:/admin/menu-items";
+    }
+
+    private static void validateSpiceLevel(Integer spiceLevel) {
+        if (spiceLevel != null && (spiceLevel < 0 || spiceLevel > 3)) {
+            throw new IllegalArgumentException(
+                    "spice_level must be between 0 and 3: " + spiceLevel);
+        }
     }
 
     @PostMapping("/menu-items/{id}/delete")

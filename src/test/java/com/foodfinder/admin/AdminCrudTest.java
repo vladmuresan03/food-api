@@ -547,4 +547,211 @@ class AdminCrudTest {
 
         assertThat(menuItems.findById(miId)).isEmpty();
     }
+
+    // ------------------------------------------------------------------ V4 metadata (Tier 1B)
+
+    @Test
+    void createProductWithMetadataPersistsAllFields() throws Exception {
+        seedRestaurant();
+        mvc.perform(post("/admin/products")
+                        .param("productKey", "meta-prod")
+                        .param("restaurantKey", "crud-r")
+                        .param("name", "Meta Prod")
+                        .param("weightText", "350g")
+                        .param("weightGrams", "350")
+                        .param("category", "Pizza")
+                        // mixed casing + spaces, with a duplicate to verify dedup
+                        .param("tags", "VEGETARIAN,  spicy , vegetarian")
+                        .param("status", "ACTIVE")
+                        .with(httpBasic("test-admin", "test-password"))
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/products"));
+
+        Product p = products.findByProductKey("meta-prod").orElseThrow();
+        assertThat(p.getWeightGrams()).isEqualTo(350);
+        assertThat(p.getCategory()).isEqualTo("Pizza");
+        assertThat(p.getTags()).isEqualTo("vegetarian,spicy");
+        assertThat(p.getUpdatedBy()).isEqualTo("test-admin");
+    }
+
+    @Test
+    void createProductRejectsUnknownTag() throws Exception {
+        seedRestaurant();
+        mvc.perform(post("/admin/products")
+                        .param("productKey", "bad-tag-prod")
+                        .param("restaurantKey", "crud-r")
+                        .param("name", "Bad Tag")
+                        .param("tags", "vegetarian,purple-monkey")
+                        .with(httpBasic("test-admin", "test-password"))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(xpath("//div[@class='errors']").exists())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("purple-monkey")));
+    }
+
+    @Test
+    void createProductRejectsOutOfRangeWeight() throws Exception {
+        seedRestaurant();
+        mvc.perform(post("/admin/products")
+                        .param("productKey", "fat-prod")
+                        .param("restaurantKey", "crud-r")
+                        .param("name", "Fat")
+                        .param("weightGrams", "100500")
+                        .with(httpBasic("test-admin", "test-password"))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(xpath("//div[@class='errors']").exists())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("weight_grams")));
+    }
+
+    @Test
+    void updateProductReplacesMetadata() throws Exception {
+        seedRestaurant();
+        productCsv.parse(new StringReader("""
+                product_key,restaurant_key,name,status
+                upd-meta,crud-r,Upd Meta,DRAFT
+                """), false);
+
+        mvc.perform(post("/admin/products/upd-meta")
+                        .param("restaurantKey", "crud-r")
+                        .param("name", "Upd Meta")
+                        .param("weightGrams", "200")
+                        .param("category", "Soup")
+                        .param("tags", "vegan")
+                        .param("status", "ACTIVE")
+                        .with(httpBasic("test-admin", "test-password"))
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection());
+
+        Product p = products.findByProductKey("upd-meta").orElseThrow();
+        assertThat(p.getWeightGrams()).isEqualTo(200);
+        assertThat(p.getCategory()).isEqualTo("Soup");
+        assertThat(p.getTags()).isEqualTo("vegan");
+    }
+
+    @Test
+    void createMenuItemWithSpiceLevelPersistsIt() throws Exception {
+        seedRestaurant();
+        menuCsv.parse(new StringReader("""
+                menu_key,restaurant_key,name,menu_type,status
+                sl-menu,crud-r,SL,PERMANENT,DRAFT
+                """), false);
+        productCsv.parse(new StringReader("""
+                product_key,restaurant_key,name,status
+                sl-prod,crud-r,SL Prod,ACTIVE
+                """), false);
+
+        mvc.perform(post("/admin/menu-items")
+                        .param("menuKey", "sl-menu")
+                        .param("productKey", "sl-prod")
+                        .param("sectionName", "Mains")
+                        .param("price", "18.00")
+                        .param("currency", "RON")
+                        .param("available", "true")
+                        .param("sortOrder", "0")
+                        .param("spiceLevel", "2")
+                        .with(httpBasic("test-admin", "test-password"))
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection());
+
+        Long menuId = menus.findByMenuKey("sl-menu").orElseThrow().getId();
+        Long productId = products.findByProductKey("sl-prod").orElseThrow().getId();
+        MenuItem mi = menuItems.findByMenuIdAndProductId(menuId, productId).orElseThrow();
+        assertThat(mi.getSpiceLevel()).isEqualTo(2);
+    }
+
+    @Test
+    void createMenuItemRejectsOutOfRangeSpiceLevel() throws Exception {
+        seedRestaurant();
+        menuCsv.parse(new StringReader("""
+                menu_key,restaurant_key,name,menu_type,status
+                bad-sl-menu,crud-r,Bad,PERMANENT,DRAFT
+                """), false);
+        productCsv.parse(new StringReader("""
+                product_key,restaurant_key,name,status
+                bad-sl-prod,crud-r,Bad Prod,ACTIVE
+                """), false);
+
+        mvc.perform(post("/admin/menu-items")
+                        .param("menuKey", "bad-sl-menu")
+                        .param("productKey", "bad-sl-prod")
+                        .param("sectionName", "S")
+                        .param("spiceLevel", "7")
+                        .with(httpBasic("test-admin", "test-password"))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(xpath("//div[@class='errors']").exists())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("spice_level")));
+    }
+
+    @Test
+    void updateMenuItemReplacesSpiceLevel() throws Exception {
+        seedRestaurant();
+        menuCsv.parse(new StringReader("""
+                menu_key,restaurant_key,name,menu_type,status
+                usl-menu,crud-r,USL,PERMANENT,DRAFT
+                """), false);
+        productCsv.parse(new StringReader("""
+                product_key,restaurant_key,name,status
+                usl-prod,crud-r,USL Prod,DRAFT
+                """), false);
+        menuItemCsv.parse(new StringReader("""
+                menu_key,product_key,section_name,price,currency,available,sort_order,spice_level
+                usl-menu,usl-prod,Mains,18.00,RON,true,1,1
+                """), false);
+
+        Long miId = menuItems.findByMenuIdAndProductId(
+                menus.findByMenuKey("usl-menu").orElseThrow().getId(),
+                products.findByProductKey("usl-prod").orElseThrow().getId()).orElseThrow().getId();
+
+        mvc.perform(post("/admin/menu-items/" + miId)
+                        .param("sectionName", "Mains")
+                        .param("price", "18.00")
+                        .param("currency", "RON")
+                        .param("available", "true")
+                        .param("sortOrder", "1")
+                        .param("spiceLevel", "3")
+                        .with(httpBasic("test-admin", "test-password"))
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection());
+
+        assertThat(menuItems.findById(miId).orElseThrow().getSpiceLevel()).isEqualTo(3);
+    }
+
+    @Test
+    void productCsvRoundtripsV4Fields() throws Exception {
+        seedRestaurant();
+        productCsv.parse(new StringReader("""
+                product_key,restaurant_key,name,weight_text,weight_grams,category,tags,status
+                csv-meta,crud-r,CSV Meta,250g,250,Dessert,"sweet,bio",ACTIVE
+                """), false);
+
+        Product p = products.findByProductKey("csv-meta").orElseThrow();
+        assertThat(p.getWeightGrams()).isEqualTo(250);
+        assertThat(p.getCategory()).isEqualTo("Dessert");
+        assertThat(p.getTags()).isEqualTo("sweet,bio");
+    }
+
+    @Test
+    void menuItemCsvRoundtripsSpiceLevel() throws Exception {
+        seedRestaurant();
+        menuCsv.parse(new StringReader("""
+                menu_key,restaurant_key,name,menu_type,status
+                csv-sl-menu,crud-r,SL,PERMANENT,DRAFT
+                """), false);
+        productCsv.parse(new StringReader("""
+                product_key,restaurant_key,name,status
+                csv-sl-prod,crud-r,SL Prod,ACTIVE
+                """), false);
+        menuItemCsv.parse(new StringReader("""
+                menu_key,product_key,section_name,price,currency,available,sort_order,spice_level
+                csv-sl-menu,csv-sl-prod,Mains,18.00,RON,true,1,2
+                """), false);
+
+        Long menuId = menus.findByMenuKey("csv-sl-menu").orElseThrow().getId();
+        Long productId = products.findByProductKey("csv-sl-prod").orElseThrow().getId();
+        assertThat(menuItems.findByMenuIdAndProductId(menuId, productId).orElseThrow().getSpiceLevel())
+                .isEqualTo(2);
+    }
 }

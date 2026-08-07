@@ -33,6 +33,15 @@ public class Product extends Timestamped {
     @Column(name = "weight_text", length = 100)
     private String weightText;
 
+    @Column(name = "weight_grams")
+    private Integer weightGrams;
+
+    @Column(length = 60)
+    private String category;
+
+    @Column(length = 250)
+    private String tags;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private ProductStatus status = ProductStatus.DRAFT;
@@ -79,6 +88,30 @@ public class Product extends Timestamped {
 
     public void setWeightText(String weightText) {
         this.weightText = weightText;
+    }
+
+    public Integer getWeightGrams() {
+        return weightGrams;
+    }
+
+    public void setWeightGrams(Integer weightGrams) {
+        this.weightGrams = weightGrams;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
+    public String getTags() {
+        return tags;
+    }
+
+    public void setTags(String tags) {
+        this.tags = tags;
     }
 
     public ProductStatus getStatus() {

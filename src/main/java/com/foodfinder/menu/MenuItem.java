@@ -49,6 +49,9 @@ public class MenuItem extends Timestamped {
     @Column(name = "sort_order", nullable = false)
     private int sortOrder = 0;
 
+    @Column(name = "spice_level")
+    private Integer spiceLevel;
+
     public Long getId() {
         return id;
     }
@@ -115,5 +118,13 @@ public class MenuItem extends Timestamped {
 
     public void setSortOrder(int sortOrder) {
         this.sortOrder = sortOrder;
+    }
+
+    public Integer getSpiceLevel() {
+        return spiceLevel;
+    }
+
+    public void setSpiceLevel(Integer spiceLevel) {
+        this.spiceLevel = spiceLevel;
     }
 }

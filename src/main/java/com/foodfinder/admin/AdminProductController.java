@@ -97,8 +97,15 @@ public class AdminProductController {
         p.setRestaurantId(restaurantId);
         p.setName(body.name());
         p.setDescription(body.description());
-        p.setWeightText(body.weightText());
+        p.setWeightText(blankToNull(body.weightText()));
+        p.setWeightGrams(body.weightGrams());
+        p.setCategory(blankToNull(body.category()));
+        p.setTags(blankToNull(body.tags()));
         p.setStatus(body.status() == null ? ProductStatus.DRAFT : body.status());
+    }
+
+    private static String blankToNull(String s) {
+        return s == null || s.isBlank() ? null : s;
     }
 
     public record ProductUpsert(
@@ -107,6 +114,9 @@ public class AdminProductController {
             @NotBlank String name,
             String description,
             String weightText,
+            Integer weightGrams,
+            String category,
+            String tags,
             ProductStatus status) {
     }
 
@@ -115,10 +125,11 @@ public class AdminProductController {
 
     public record ProductView(
             Long id, String productKey, Long restaurantId, String name, String description,
-            String weightText, String status) {
+            String weightText, Integer weightGrams, String category, String tags, String status) {
         static ProductView of(Product p) {
             return new ProductView(p.getId(), p.getProductKey(), p.getRestaurantId(), p.getName(),
-                    p.getDescription(), p.getWeightText(),
+                    p.getDescription(), p.getWeightText(), p.getWeightGrams(),
+                    p.getCategory(), p.getTags(),
                     p.getStatus() == null ? null : p.getStatus().name());
         }
     }
