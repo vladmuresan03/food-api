@@ -539,6 +539,11 @@ class AdminCrudTest {
                 menus.findByMenuKey("del-menu").orElseThrow().getId(),
                 products.findByProductKey("del-prod").orElseThrow().getId()).orElseThrow().getId();
 
+        // Two-step guard: must Hide (available=false) before Delete.
+        MenuItem seeded = menuItems.findById(miId).orElseThrow();
+        seeded.setAvailable(false);
+        menuItems.save(seeded);
+
         mvc.perform(post("/admin/menu-items/" + miId + "/delete")
                         .with(httpBasic("test-admin", "test-password"))
                         .with(csrf()))
@@ -546,6 +551,40 @@ class AdminCrudTest {
                 .andExpect(redirectedUrl("/admin/menu-items"));
 
         assertThat(menuItems.findById(miId)).isEmpty();
+    }
+
+    @Test
+    void deleteVisibleMenuItemIsRejectedAndKeepsRow() throws Exception {
+        restaurantCsv.parse(new StringReader("""
+                restaurant_key,name,city,status
+                del2-r,Del 2,Cluj-Napoca,ACTIVE
+                """), false);
+        menuCsv.parse(new StringReader("""
+                menu_key,restaurant_key,name,menu_type,status
+                del2-menu,del2-r,Del 2,PERMANENT,DRAFT
+                """), false);
+        productCsv.parse(new StringReader("""
+                product_key,restaurant_key,name,status
+                del2-prod,del2-r,Del 2 Prod,DRAFT
+                """), false);
+        menuItemCsv.parse(new StringReader("""
+                menu_key,product_key,section_name,price,currency,available,sort_order
+                del2-menu,del2-prod,Starters,10.00,RON,true,1
+                """), false);
+
+        Long miId = menuItems.findByMenuIdAndProductId(
+                menus.findByMenuKey("del2-menu").orElseThrow().getId(),
+                products.findByProductKey("del2-prod").orElseThrow().getId()).orElseThrow().getId();
+
+        // Seeded with available=true, so delete is rejected.
+        mvc.perform(post("/admin/menu-items/" + miId + "/delete")
+                        .with(httpBasic("test-admin", "test-password"))
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/menu-items"))
+                .andExpect(flash().attributeExists("errorMessage"));
+
+        assertThat(menuItems.findById(miId)).isPresent();
     }
 
     // ------------------------------------------------------------------ V4 metadata (Tier 1B)

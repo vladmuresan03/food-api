@@ -44,10 +44,30 @@
             <td class="muted" th:text="${#temporals.format(r.updatedAt, 'yyyy-MM-dd HH:mm')}"></td>
             <td class="actions">
                 <a th:href="@{'/admin/menu-items/' + ${r.id} + '/edit'}">Edit</a>
-                <form th:action="@{'/admin/menu-items/' + ${r.id} + '/delete'}" method="post" style="display:inline">
+                <form th:if="${r.available}"
+                      th:action="@{'/admin/menu-items/' + ${r.id} + '/archive'}"
+                      method="post" style="display:inline">
                     <button type="submit"
                             style="background:transparent;border:0;color:#dc2626;cursor:pointer;font-size:0.85rem;padding:0;margin-left:0.5rem;"
-                            onclick="return confirm('Delete this menu item?')">Delete</button>
+                            onclick="return confirm('Hide this menu item? It will no longer appear in the public menu (reversible via Show).')">Hide</button>
+                </form>
+                <form th:if="${!r.available}"
+                      th:action="@{'/admin/menu-items/' + ${r.id} + '/activate'}"
+                      method="post" style="display:inline">
+                    <button type="submit"
+                            style="background:transparent;border:0;color:#16a34a;cursor:pointer;font-size:0.85rem;padding:0;margin-left:0.5rem;"
+                            onclick="return confirm('Show this menu item? It will be visible in the public menu again.')">Show</button>
+                </form>
+                <!-- Hard delete is only available after Hide, as a two-step guard.
+                     confirmHardDelete() requires the operator to type the exact product_key
+                     before the form submits. -->
+                <form th:if="${!r.available}"
+                      th:action="@{'/admin/menu-items/' + ${r.id} + '/delete'}"
+                      method="post" style="display:inline">
+                    <button type="submit"
+                            style="background:transparent;border:0;color:#991b1b;cursor:pointer;font-size:0.85rem;padding:0;margin-left:0.5rem;font-weight:600;"
+                            title="Only available after Hide."
+                            th:onclick="return confirmHardDelete([[${r.productKey}]])">Delete (hard)</button>
                 </form>
             </td>
         </tr>

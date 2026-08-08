@@ -1129,13 +1129,71 @@ public class AdminViewController {
         }
     }
 
-    @PostMapping("/menu-items/{id}/delete")
-    public String deleteMenuItem(@PathVariable("id") Long id, RedirectAttributes ra) {
+    @PostMapping("/menu-items/{id}/archive")
+    public String archiveMenuItem(@PathVariable("id") Long id, Authentication auth,
+                                  RedirectAttributes ra) {
         MenuItem mi = menuItems.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Menu item not found: " + id));
-        menuItems.delete(mi);
-        ra.addFlashAttribute("successMessage", "Menu item deleted");
+        String productKey = lookupProductKey(mi);
+        if (!mi.isAvailable()) {
+            ra.addFlashAttribute("successMessage", "Menu item '" + productKey + "' is already hidden");
+            return "redirect:/admin/menu-items";
+        }
+        mi.setAvailable(false);
+        mi.setUpdatedBy(actor(auth));
+        menuItems.save(mi);
+        ra.addFlashAttribute("successMessage", "Menu item '" + productKey
+                + "' hidden from consumers (reversible via Show)");
         return "redirect:/admin/menu-items";
+    }
+
+    @PostMapping("/menu-items/{id}/activate")
+    public String activateMenuItem(@PathVariable("id") Long id, Authentication auth,
+                                   RedirectAttributes ra) {
+        MenuItem mi = menuItems.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Menu item not found: " + id));
+        String productKey = lookupProductKey(mi);
+        if (mi.isAvailable()) {
+            ra.addFlashAttribute("successMessage", "Menu item '" + productKey + "' is already visible");
+            return "redirect:/admin/menu-items";
+        }
+        mi.setAvailable(true);
+        mi.setUpdatedBy(actor(auth));
+        menuItems.save(mi);
+        ra.addFlashAttribute("successMessage", "Menu item '" + productKey + "' visible again");
+        return "redirect:/admin/menu-items";
+    }
+
+    /**
+     * Hard delete. Use only when the menu item should not exist at all
+     * (e.g. a CSV import that targeted the wrong menu). For normal
+     * "stop showing this", prefer the Hide button instead.
+     *
+     * <p>Two-step guard: the menu item must be hidden ({@code available=false})
+     * first. Server-side enforcement so a direct POST/curl can't bypass
+     * the UI's button visibility check.</p>
+     */
+    @PostMapping("/menu-items/{id}/delete")
+    public String deleteMenuItem(@PathVariable("id") Long id, Authentication auth,
+                                 RedirectAttributes ra) {
+        MenuItem mi = menuItems.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Menu item not found: " + id));
+        String productKey = lookupProductKey(mi);
+        if (mi.isAvailable()) {
+            ra.addFlashAttribute("errorMessage",
+                    "Hard delete requires the menu item to be hidden first. "
+                            + "Hide '" + productKey + "' before deleting. Currently visible.");
+            return "redirect:/admin/menu-items";
+        }
+        menuItems.delete(mi);
+        ra.addFlashAttribute("successMessage", "Menu item '" + productKey + "' permanently deleted");
+        return "redirect:/admin/menu-items";
+    }
+
+    private String lookupProductKey(MenuItem mi) {
+        return products.findById(mi.getProductId())
+                .map(p -> p.getProductKey())
+                .orElse("#" + mi.getProductId());
     }
 
     // ------------------------------------------------------------------ CSV import submission
