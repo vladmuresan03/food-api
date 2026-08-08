@@ -82,8 +82,10 @@ public class PhotoController {
             @RequestParam(value = "productKey", required = false) String productKey,
             @RequestParam(value = "altText", required = false) String altText,
             @RequestParam(value = "isPrimary", defaultValue = "false") boolean isPrimary,
+            @RequestParam(value = "sourceType", required = false) PhotoSourceType sourceType,
             org.springframework.security.core.Authentication auth) throws IOException {
-        return service.upload(restaurantKey, productKey, altText, isPrimary, file, actor(auth));
+        return service.upload(restaurantKey, productKey, altText, isPrimary, file,
+                sourceType == null ? PhotoSourceType.UPLOAD : sourceType, actor(auth));
     }
 
     @PutMapping("/admin/api/photos/{photoKey}")

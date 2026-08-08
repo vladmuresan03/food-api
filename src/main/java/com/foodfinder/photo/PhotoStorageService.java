@@ -49,12 +49,19 @@ public class PhotoStorageService {
     @Transactional
     public Photo upload(String restaurantKey, String productKey, String altText,
                         boolean isPrimary, MultipartFile file) throws IOException {
-        return upload(restaurantKey, productKey, altText, isPrimary, file, null);
+        return upload(restaurantKey, productKey, altText, isPrimary, file, PhotoSourceType.UPLOAD, null);
     }
 
     @Transactional
     public Photo upload(String restaurantKey, String productKey, String altText,
                         boolean isPrimary, MultipartFile file, String actor) throws IOException {
+        return upload(restaurantKey, productKey, altText, isPrimary, file, PhotoSourceType.UPLOAD, actor);
+    }
+
+    @Transactional
+    public Photo upload(String restaurantKey, String productKey, String altText,
+                        boolean isPrimary, MultipartFile file,
+                        PhotoSourceType sourceType, String actor) throws IOException {
         if (file.isEmpty()) {
             throw new IllegalArgumentException("Uploaded file is empty");
         }
@@ -125,7 +132,7 @@ public class PhotoStorageService {
         p.setPhotoKey(photoKey);
         p.setRestaurantId(restaurantId);
         p.setProductId(productId);
-        p.setSourceType(PhotoSourceType.UPLOAD);
+        p.setSourceType(sourceType == null ? PhotoSourceType.UPLOAD : sourceType);
         p.setStorageKey(stored.storageKey());
         p.setThumbnailStorageKey(thumbKey);
         p.setMimeType(mime);
