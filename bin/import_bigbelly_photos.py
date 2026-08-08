@@ -51,13 +51,16 @@ RAW_PHOTO_DIR = FOOD_CRAWLER_ROOT / "photo_export" / "restaurants" / "big-belly-
 # in the current big-belly-manastur catalog are listed. Unmatched dishes are
 # uploaded as restaurant-level photos (no productKey) so the photo still
 # appears in the restaurant's gallery.
+#
+# Keys here are PRE-namespaced with the restaurant_key prefix; the importer
+# strips the prefix before adding it as a productKey form field.
 DISH_TO_PRODUCT: dict[str, str] = {
     "bb-0": None,   # Meniu Piept de Pui Crocant - 5 buc  (no current match)
     "bb-1": None,   # Meniu Piept de Pui Crocant - 7 buc  (no current match)
     "bb-2": "por-ie-ca-caval",        # Meniu Cașcaval  ->  porție cașcaval
     "bb-3": None,   # Meniu Mixt Cașcaval  (no current match)
     "bb-4": None,   # Meniu Mixt  (no current match)
-    "bb-5": "meniu-gr-tar",           # Meniu Grătar
+    "bb-5": "meniu-gratar",           # Meniu Gratar (the live site spells it without diacritics)
     "bb-6": "meniu-pulpe-de-pui",     # Meniu Pulpe de Pui Dezosate
     "bb-7": "meniu-aripioare",        # Meniu Aripioare Crocante
     "bb-8": "meniu-turkey-sandwich",  # Meniu Turkey Sandwich
@@ -69,6 +72,16 @@ DISH_TO_PRODUCT: dict[str, str] = {
 
 RESTAURANT_KEY = "big-belly-manastur"
 API_BASE = "https://food.treloc.com"
+
+# Map the short product_keys (without restaurant prefix) to the
+# namespaced product_keys used by the new scrape-based import. The
+# food-crawler photo import looks up the product by the SHORT key
+# (matching the historical convention); the new importer uses
+# `{restaurantKey}-{slug}` everywhere, so we translate here.
+def _qualify(short_key: str | None) -> str | None:
+    if not short_key:
+        return None
+    return f"{RESTAURANT_KEY}-{short_key}"
 
 # --------------------------------------------------------------------------- helpers
 
@@ -130,7 +143,7 @@ def main() -> int:
         # happens to match a current product, we must NOT bind it (the
         # food-crawler already ruled out a visual match for the dish).
         if binding_type in ("DISH_CONFIRMED", "DISH_PLAUSIBLE"):
-            product_key = DISH_TO_PRODUCT.get(b["dishId"])
+            product_key = _qualify(DISH_TO_PRODUCT.get(b["dishId"]))
         else:
             product_key = None
         if binding_type == "DISH_CONFIRMED":
