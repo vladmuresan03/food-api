@@ -34,6 +34,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -145,6 +146,39 @@ class FileUploadTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.assetType").value("URL"));
+    }
+
+    // ------------------------------------------------------------------ photo archive (form POST + REST DELETE)
+
+    @Test
+    void photoArchiveViaFormPostAndRestDelete() throws Exception {
+        // Upload a photo to get a key.
+        byte[] bytes = sampleJpeg();
+        String key = mvc.perform(multipart("/admin/api/photos")
+                        .file(new org.springframework.mock.web.MockMultipartFile(
+                                "file", "p.jpg", MediaType.IMAGE_JPEG_VALUE, bytes))
+                        .param("restaurantKey", "up-r1")
+                        .param("altText", "form-archive-test")
+                        .with(httpBasic("test-admin", "test-password")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString()
+                .split("\"photoKey\":\"")[1].split("\"")[0];
+
+        // Form-based archive: POST (no body) to /admin/api/photos/{key}.
+        // AdminViewController redirects to /admin/photos. The
+        // HiddenHttpMethodFilter is no longer auto-registered in
+        // Spring Boot 4, so we accept POST directly.
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .post("/admin/api/photos/" + key)
+                        .with(httpBasic("test-admin", "test-password")))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location",
+                        org.hamcrest.Matchers.containsString("/admin/photos")));
+
+        // Verify archived: status=ARCHIVED on the public read.
+        mvc.perform(get("/api/photos/" + key + "/content")
+                        .with(httpBasic("test-admin", "test-password")))
+                .andExpect(status().isNotFound());
     }
 
     // ------------------------------------------------------------------ photo serving

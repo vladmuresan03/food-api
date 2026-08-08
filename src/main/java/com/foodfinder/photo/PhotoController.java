@@ -105,6 +105,24 @@ public class PhotoController {
         return ResponseEntity.noContent().build();
     }
 
+    // Form-based archive: the admin UI uses <form method="post"> +
+    // <input name="_method" value="delete"> to drive destructive
+    // actions. Spring Boot 4 no longer auto-registers
+    // HiddenHttpMethodFilter, so the form's POST would otherwise
+    // hit a 405. We accept POST on the same path and forward to
+    // the same archive() call. We send a 302 (not a String view
+    // name) because this controller is @RestController, so
+    // returning "redirect:..." would just be returned as the
+    // response body string.
+    @PostMapping("/admin/api/photos/{photoKey}")
+    public ResponseEntity<Void> archiveViaForm(@PathVariable String photoKey,
+                                                org.springframework.security.core.Authentication auth) {
+        service.archive(photoKey, actor(auth));
+        return ResponseEntity.status(org.springframework.http.HttpStatus.FOUND)
+                .header("Location", "/admin/photos?archived=" + photoKey)
+                .build();
+    }
+
     private static String actor(org.springframework.security.core.Authentication auth) {
         return auth == null ? null : auth.getName();
     }
