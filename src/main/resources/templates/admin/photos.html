@@ -6,6 +6,13 @@
 <nav th:replace="~{admin/_layout :: nav('photos')}"></nav>
 <main>
     <h2>Photos</h2>
+    <div th:if="${successMessage != null}" class="success">
+        <p th:text="${successMessage}"></p>
+    </div>
+    <div th:if="${errorMessage != null}" class="errors">
+        <p th:text="${errorMessage}"></p>
+    </div>
+
     <div class="toolbar">
         <form method="get" th:action="@{/admin/photos}">
             <input name="restaurantKey" th:value="${restaurantKey}" placeholder="restaurant_key"/>
@@ -20,16 +27,24 @@
         <a class="secondary" th:href="@{/admin/api/csv/photos}" style="margin-left:auto;">Download CSV</a>
     </div>
 
-    <h3>Upload</h3>
-    <form th:action="@{/admin/api/photos}" method="post" enctype="multipart/form-data"
-          class="toolbar" style="background:white;border:1px solid var(--border);padding:0.75rem;border-radius:4px;">
-        <input type="file" name="file" accept="image/jpeg,image/png" required="required"/>
-        <input name="restaurantKey" placeholder="restaurant_key" required="required"/>
-        <input name="productKey" placeholder="product_key (optional)"/>
-        <input name="altText" placeholder="alt text (optional)"/>
-        <label><input type="checkbox" name="isPrimary" value="true" checked="checked"/> primary</label>
-        <button type="submit">Upload</button>
-    </form>
+    <p class="muted" style="margin:0.5rem 0;">
+        For uploads with a clear context (a specific product, menu item or restaurant)
+        use the inline "+ photo" buttons on those pages. The form below is a
+        raw fallback that lets you type any restaurant_key / product_key.
+    </p>
+
+    <details>
+        <summary style="cursor:pointer;">Raw upload (manual keys)</summary>
+        <form th:action="@{/admin/api/photos}" method="post" enctype="multipart/form-data"
+              class="toolbar" style="background:white;border:1px solid var(--border);padding:0.75rem;border-radius:4px;margin:0.5rem 0 1rem;">
+            <input type="file" name="file" accept="image/jpeg,image/png" required="required"/>
+            <input name="restaurantKey" placeholder="restaurant_key" required="required"/>
+            <input name="productKey" placeholder="product_key (optional)"/>
+            <input name="altText" placeholder="alt text (optional)"/>
+            <label><input type="checkbox" name="isPrimary" value="true" checked="checked"/> primary</label>
+            <button type="submit">Upload</button>
+        </form>
+    </details>
 
     <div th:if="${rows.empty}" class="empty"><p><strong>No photos yet.</strong></p></div>
 
@@ -54,9 +69,10 @@
                 <span th:unless="${p.contentUrl != null}" class="muted">—</span>
             </td>
             <td class="actions">
+                <a th:href="@{'/admin/photos/' + ${p.photoKey} + '/edit'}">Edit</a>
                 <form th:action="@{'/admin/api/photos/' + ${p.photoKey}}" method="post" style="display:inline">
                     <input type="hidden" name="_method" value="delete"/>
-                    <button type="submit" style="background:transparent;border:0;color:#dc2626;cursor:pointer;font-size:0.85rem;padding:0;"
+                    <button type="submit" style="background:transparent;border:0;color:#dc2626;cursor:pointer;font-size:0.85rem;padding:0;margin-left:0.5rem;"
                             onclick="return confirm('Archive this photo?')">Archive</button>
                 </form>
             </td>

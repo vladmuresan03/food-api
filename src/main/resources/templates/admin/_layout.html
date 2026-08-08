@@ -70,12 +70,19 @@
     <a th:href="@{/admin/imports}" th:classappend="${active == 'imports'} ? 'active' : ''">Import history</a>
 </nav>
 
-<!-- Shared client-side helper for destructive actions. Use the
+<!-- Shared client-side helpers. Use the
      confirmHardDelete(key) function in a button's onclick to require
      the operator to type the entity's key before the form submits.
-     Cancellable (returns false) on Escape or mismatch. -->
+     Cancellable (returns false) on Escape or mismatch.
+
+     Any element with [data-file-input] and a child [id] matching a
+     file input is treated as a drop zone: click to open the picker,
+     Ctrl/Cmd+V to paste an image from the clipboard. The file goes
+     into the referenced <input type="file"> and a preview is shown
+     if the page also has #photo-preview + #photo-preview-wrap. -->
 <th:block th:fragment="scripts">
     <script>
+        /*<![CDATA[*/
         function confirmHardDelete(key) {
             var typed = window.prompt(
                 'To PERMANENTLY delete this and all its child rows, type the key to confirm:\n\n'
@@ -88,6 +95,61 @@
             }
             return true;
         }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('[data-file-input]').forEach(function (zone) {
+                var inputId = zone.getAttribute('data-file-input');
+                var input = document.getElementById(inputId);
+                if (!input) return;
+                var filename = zone.querySelector('[data-filename]');
+                var previewWrap = document.getElementById('photo-preview-wrap');
+                var preview = document.getElementById('photo-preview');
+
+                function showFile(file) {
+                    if (filename) {
+                        filename.textContent = 'Selected: ' + file.name
+                            + ' (' + Math.round(file.size / 1024) + ' KB)';
+                        filename.style.display = 'block';
+                    }
+                    if (preview && previewWrap && file.type.indexOf('image/') === 0) {
+                        var reader = new FileReader();
+                        reader.onload = function (ev) {
+                            preview.src = ev.target.result;
+                            previewWrap.style.display = 'block';
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                }
+
+                zone.addEventListener('click', function () { input.click(); });
+                zone.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); }
+                });
+                input.addEventListener('change', function () {
+                    if (input.files && input.files[0]) showFile(input.files[0]);
+                });
+                zone.addEventListener('paste', function (e) {
+                    var items = (e.clipboardData || {}).items || [];
+                    for (var i = 0; i < items.length; i++) {
+                        if (items[i].kind === 'file' && items[i].type.indexOf('image/') === 0) {
+                            var file = items[i].getAsFile();
+                            if (!file) continue;
+                            try {
+                                var dt = new DataTransfer();
+                                dt.items.add(file);
+                                input.files = dt.files;
+                            } catch (err) {
+                                console.warn('Could not assign pasted file to input', err);
+                            }
+                            showFile(file);
+                            e.preventDefault();
+                            return;
+                        }
+                    }
+                });
+            });
+        });
+        /*]]>*/
     </script>
 </th:block>
 

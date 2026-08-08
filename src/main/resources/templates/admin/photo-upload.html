@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/_layout :: head('Upload photo')}"></head>
+<body>
+<header th:replace="~{admin/_layout :: topbar}"></header>
+<nav th:replace="~{admin/_layout :: nav('photos')}"></nav>
+<main>
+    <h2>Upload photo</h2>
+    <p class="muted">
+        <span th:if="${productKey != null}">For product <code th:text="${productKey}"></code>
+            in restaurant <code th:text="${restaurantKey}"></code>.</span>
+        <span th:unless="${productKey != null}">For restaurant <code th:text="${restaurantKey}"></code>
+            (restaurant-level gallery).</span>
+        <span th:if="${menuItemId != null}"> From menu item #<span th:text="${menuItemId}"></span>.</span>
+    </p>
+
+    <div th:if="${successMessage != null}" class="success">
+        <p th:text="${successMessage}"></p>
+    </div>
+    <div th:if="${errorMessage != null}" class="errors">
+        <p th:text="${errorMessage}"></p>
+    </div>
+
+    <form th:action="@{/admin/api/photos}" method="post" enctype="multipart/form-data"
+          id="photo-upload-form" style="max-width:640px;">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+        <table style="max-width:none;">
+            <tr>
+                <td><label>restaurant_key</label></td>
+                <td>
+                    <input name="restaurantKey" th:value="${restaurantKey}" readonly="readonly"
+                           style="background:#f3f4f6;width:100%;"/>
+                </td>
+            </tr>
+            <tr th:if="${productKey != null}">
+                <td><label>product_key</label></td>
+                <td>
+                    <input name="productKey" th:value="${productKey}" readonly="readonly"
+                           style="background:#f3f4f6;width:100%;"/>
+                </td>
+            </tr>
+            <tr th:unless="${productKey != null}">
+                <td><label>product_key</label></td>
+                <td>
+                    <input name="productKey" value="" placeholder="(optional) bind to a specific product"/>
+                    <p class="muted" style="font-size:0.8em; margin:0.25rem 0 0;">
+                        Leave blank to keep the photo at restaurant level.
+                    </p>
+                </td>
+            </tr>
+            <tr>
+                <td><label for="altText">alt text</label></td>
+                <td>
+                    <input id="altText" name="altText" placeholder="short description for screen readers"
+                           style="width:100%;" maxlength="300"/>
+                </td>
+            </tr>
+            <tr>
+                <td><label for="isPrimary">primary</label></td>
+                <td>
+                    <label style="font-weight:normal;">
+                        <input id="isPrimary" type="checkbox" name="isPrimary" value="true" checked="checked"/>
+                        make this the primary photo in its scope
+                    </label>
+                </td>
+            </tr>
+            <tr>
+                <td><label for="sourceType">source</label></td>
+                <td>
+                    <select id="sourceType" name="sourceType">
+                        <option th:each="s : ${sourceTypes}" th:value="${s}" th:text="${s}"
+                                th:selected="${s.name() == 'UPLOAD'}"></option>
+                    </select>
+                </td>
+            </tr>
+        </table>
+
+        <!-- Drop zone: the file input is the actual upload target, but we add
+             a clickable area + paste listener that drives it. The data-*
+             attributes are read by the JS in _layout.html. -->
+        <div id="photo-dropzone" data-file-input="file" tabindex="0"
+             style="margin-top:1rem; padding:2rem; border:2px dashed var(--border);
+                    border-radius:6px; text-align:center; cursor:pointer; background:#fafafa;">
+            <p style="margin:0; font-size:1.05em;">
+                <strong>Click to choose a file</strong> or
+                <strong>paste an image</strong> (<code>Ctrl/Cmd + V</code>)
+            </p>
+            <p class="muted" style="margin:0.5rem 0 0; font-size:0.85em;">
+                JPEG or PNG, up to 20 MB.
+            </p>
+            <p id="photo-dropzone-filename" class="muted"
+               style="margin:0.5rem 0 0; font-size:0.85em; display:none;"></p>
+        </div>
+        <input type="file" id="photo-file-input" name="file"
+               accept="image/jpeg,image/png" required="required"
+               style="display:none;"/>
+
+        <!-- Optional preview shown after file/paste selection. -->
+        <div id="photo-preview-wrap" style="display:none; margin-top:1rem;">
+            <p class="muted" style="margin:0 0 0.25rem;">Preview</p>
+            <img id="photo-preview" alt="Selected photo preview"
+                 style="max-width:240px; max-height:240px; border:1px solid var(--border); border-radius:4px;"/>
+        </div>
+
+        <div class="toolbar" style="margin-top:1rem;">
+            <button type="submit">Upload</button>
+            <a class="secondary" th:href="@{/admin/photos}">Back to gallery</a>
+        </div>
+    </form>
+</main>
+<th:block th:replace="~{admin/_layout :: scripts}"></th:block>
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    // Wire the drop zone + paste support. The helper is also added to the
+    // shared layout so the same behaviour is available on any page that
+    // includes a [data-file-input] element. We do it here too in case the
+    // layout is shared and the script is re-run on this page only.
+    (function () {
+        var zone = document.getElementById('photo-dropzone');
+        var input = document.getElementById('photo-file-input');
+        var filename = document.getElementById('photo-dropzone-filename');
+        var previewWrap = document.getElementById('photo-preview-wrap');
+        var preview = document.getElementById('photo-preview');
+        if (!zone || !input) return;
+
+        zone.addEventListener('click', function () { input.click(); });
+        zone.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); }
+        });
+        input.addEventListener('change', function () {
+            if (input.files && input.files[0]) showFile(input.files[0]);
+        });
+        zone.addEventListener('paste', function (e) {
+            var items = (e.clipboardData || {}).items || [];
+            for (var i = 0; i < items.length; i++) {
+                if (items[i].kind === 'file' && items[i].type.indexOf('image/') === 0) {
+                    var file = items[i].getAsFile();
+                    if (file) {
+                        // Assign to the input via DataTransfer so the form
+                        // posts it as a normal file field.
+                        try {
+                            var dt = new DataTransfer();
+                            dt.items.add(file);
+                            input.files = dt.files;
+                        } catch (err) {
+                            // Some browsers don't allow programmatic file
+                            // assignment; surface the data URL as a fallback
+                            // (the form will then still send the original).
+                            console.warn('Could not assign pasted file to input', err);
+                        }
+                        showFile(file);
+                        e.preventDefault();
+                        return;
+                    }
+                }
+            }
+        });
+        function showFile(file) {
+            filename.textContent = 'Selected: ' + file.name + ' (' + Math.round(file.size / 1024) + ' KB)';
+            filename.style.display = 'block';
+            var reader = new FileReader();
+            reader.onload = function (ev) {
+                preview.src = ev.target.result;
+                previewWrap.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+    })();
+    /*]]>*/
+</script>
+</body>
+</html>

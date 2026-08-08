@@ -44,6 +44,7 @@
             <td class="muted" th:text="${#temporals.format(r.updatedAt, 'yyyy-MM-dd HH:mm')}"></td>
             <td class="actions">
                 <a th:href="@{'/admin/menu-items/' + ${r.id} + '/edit'}">Edit</a>
+                <a th:href="@{'/admin/menu-items/' + ${r.id} + '/photos/new'}" style="margin-left:0.5rem;">+ photo</a>
                 <form th:if="${r.available}"
                       th:action="@{'/admin/menu-items/' + ${r.id} + '/archive'}"
                       method="post" style="display:inline">

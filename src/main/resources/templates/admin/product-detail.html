@@ -76,6 +76,34 @@
         </tr>
         </tbody>
     </table>
+
+    <h3>Photos</h3>
+    <div th:if="${photos == null or photos.isEmpty()}" class="muted">
+        No photos yet for this product.
+        <a th:href="@{'/admin/products/' + ${p.productKey} + '/photos/new'}">+ Upload one</a>.
+    </div>
+    <div th:if="${photos != null and !photos.isEmpty()}"
+         style="display:flex; flex-wrap:wrap; gap:1rem; align-items:flex-start;">
+        <div th:each="ph : ${photos}"
+             style="border:1px solid var(--border); border-radius:4px; padding:0.5rem; background:white; max-width:200px;">
+            <a th:href="@{'/admin/photos/' + ${ph.photoKey} + '/edit'}">
+                <img th:src="${ph.thumbnailUrl}" alt="" style="max-width:180px; max-height:180px; display:block;"/>
+            </a>
+            <div style="font-size:0.8em; margin-top:0.4rem; word-break:break-all;">
+                <code th:text="${ph.photoKey}"></code>
+                <span th:if="${ph.primary}" style="color:#ca8a04;">★ primary</span>
+            </div>
+            <div style="margin-top:0.3rem;">
+                <a th:href="@{'/admin/photos/' + ${ph.photoKey} + '/edit'}"
+                   style="font-size:0.85em;">Edit / reassign</a>
+            </div>
+        </div>
+        <div style="border:1px dashed var(--border); border-radius:4px; padding:0.5rem;
+                    display:flex; align-items:center; justify-content:center; min-width:120px; min-height:120px;">
+            <a th:href="@{'/admin/products/' + ${p.productKey} + '/photos/new'}"
+               style="text-align:center; padding:0.5rem; color:#6b7280;">+ photo</a>
+        </div>
+    </div>
 </main>
 </body>
 </html>

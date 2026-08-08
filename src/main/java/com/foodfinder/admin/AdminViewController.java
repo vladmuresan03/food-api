@@ -16,6 +16,11 @@ import com.foodfinder.menu.MenuItemRepository;
 import com.foodfinder.menu.MenuRepository;
 import com.foodfinder.menu.MenuStatus;
 import com.foodfinder.menu.MenuType;
+import com.foodfinder.photo.Photo;
+import com.foodfinder.photo.PhotoRepository;
+import com.foodfinder.photo.PhotoSourceType;
+import com.foodfinder.photo.PhotoStatus;
+import com.foodfinder.photo.PhotoStorageService;
 import com.foodfinder.product.AllergenCode;
 import com.foodfinder.product.Product;
 import com.foodfinder.product.ProductIngredient;
@@ -81,6 +86,8 @@ public class AdminViewController {
     private final ProductNutritionRepository nutritions;
     private final ProductIngredientRepository ingredients;
     private final MenuItemRepository menuItems;
+    private final PhotoRepository photoRepository;
+    private final PhotoStorageService photoStorage;
     private final CsvImportLogRepository importLog;
     private final BundleImporter bundleImporter;
     private final CsvPreviewService previewService;
@@ -95,6 +102,8 @@ public class AdminViewController {
                                ProductNutritionRepository nutritions,
                                ProductIngredientRepository ingredients,
                                MenuItemRepository menuItems,
+                               PhotoRepository photoRepository,
+                               PhotoStorageService photoStorage,
                                CsvImportLogRepository importLog, BundleImporter bundleImporter,
                                CsvPreviewService previewService,
                                AdminIngredientController adminIngredients) {
@@ -113,6 +122,8 @@ public class AdminViewController {
         this.nutritions = nutritions;
         this.ingredients = ingredients;
         this.menuItems = menuItems;
+        this.photoRepository = photoRepository;
+        this.photoStorage = photoStorage;
         this.importLog = importLog;
         this.bundleImporter = bundleImporter;
         this.previewService = previewService;
@@ -189,6 +200,112 @@ public class AdminViewController {
         model.addAttribute("productKey", productKey);
         model.addAttribute("status", status);
         return "admin/photos";
+    }
+
+    // ------------------------------------------------------------------ photo edit (reassign / alt / primary / status)
+
+    /**
+     * Render the photo edit form. Lets the operator reassign a photo to a
+     * different product (or to the restaurant level), change the alt text,
+     * toggle the primary flag, or archive / un-archive the row.
+     */
+    @GetMapping("/photos/{photoKey}/edit")
+    public String editPhoto(@PathVariable("photoKey") String photoKey, Model model) {
+        Photo p = photoRepository.findByPhotoKey(photoKey)
+                .orElseThrow(() -> new NoSuchElementException("Photo not found: " + photoKey));
+        // Pre-compute the restaurant and product keys for the template.
+        String restaurantKey = restaurants.findById(p.getRestaurantId())
+                .map(Restaurant::getRestaurantKey).orElse(null);
+        String currentProductKey = p.getProductId() == null ? null
+                : products.findById(p.getProductId()).map(Product::getProductKey).orElse(null);
+        model.addAttribute("p", p);
+        model.addAttribute("restaurantKey", restaurantKey);
+        model.addAttribute("currentProductKey", currentProductKey);
+        model.addAttribute("statuses", PhotoStatus.values());
+        model.addAttribute("sourceTypes", PhotoSourceType.values());
+        return "admin/photo-form";
+    }
+
+    @PostMapping("/photos/{photoKey}")
+    public String updatePhoto(@PathVariable("photoKey") String photoKey,
+                              @RequestParam(required = false) String productKey,
+                              @RequestParam(required = false) String altText,
+                              @RequestParam(required = false) Boolean isPrimary,
+                              @RequestParam(required = false) PhotoStatus status,
+                              Authentication auth,
+                              RedirectAttributes ra) {
+        Photo p = photoRepository.findByPhotoKey(photoKey)
+                .orElseThrow(() -> new NoSuchElementException("Photo not found: " + photoKey));
+        // Normalise productKey=null to productKey="" so the service treats it
+        // as "no product" (restaurant-level) rather than "don't change".
+        String normalisedProductKey = (productKey != null && productKey.isBlank()) ? "" : productKey;
+        p = photoStorage.update(photoKey, normalisedProductKey, altText, isPrimary, status, actor(auth));
+        ra.addFlashAttribute("successMessage", "Photo '" + photoKey + "' updated");
+        return "redirect:/admin/photos";
+    }
+
+    // ------------------------------------------------------------------ per-context upload (product or menu item)
+
+    /**
+     * Render the upload form for a specific product. Pre-fills both
+     * {@code restaurantKey} and {@code productKey} so the operator only has
+     * to pick a file (or paste from clipboard).
+     */
+    @GetMapping("/products/{productKey}/photos/new")
+    public String uploadForProduct(@PathVariable("productKey") String productKey, Model model) {
+        Product p = products.findByProductKey(productKey)
+                .orElseThrow(() -> new NoSuchElementException("Unknown product_key: " + productKey));
+        String restaurantKey = restaurants.findById(p.getRestaurantId())
+                .map(Restaurant::getRestaurantKey).orElse(null);
+        if (restaurantKey == null) {
+            throw new NoSuchElementException("Could not resolve restaurant for product " + productKey);
+        }
+        model.addAttribute("restaurantKey", restaurantKey);
+        model.addAttribute("productKey", productKey);
+        model.addAttribute("menuItemId", null);
+        model.addAttribute("sourceTypes", PhotoSourceType.values());
+        return "admin/photo-upload";
+    }
+
+    /**
+     * Render the upload form at the restaurant level (no product binding).
+     * Useful for hero / cover / fallback gallery photos.
+     */
+    @GetMapping("/restaurants/{restaurantKey}/photos/new")
+    public String uploadForRestaurant(@PathVariable("restaurantKey") String restaurantKey, Model model) {
+        if (restaurants.findByRestaurantKey(restaurantKey).isEmpty()) {
+            throw new NoSuchElementException("Unknown restaurant_key: " + restaurantKey);
+        }
+        model.addAttribute("restaurantKey", restaurantKey);
+        model.addAttribute("productKey", null);
+        model.addAttribute("menuItemId", null);
+        model.addAttribute("sourceTypes", PhotoSourceType.values());
+        return "admin/photo-upload";
+    }
+
+    /**
+     * Render the upload form from a menu-item row. Resolves the
+     * {@code productKey} and {@code restaurantKey} from the menu item
+     * automatically so the operator doesn't have to type either.
+     */
+    @GetMapping("/menu-items/{id}/photos/new")
+    public String uploadForMenuItem(@PathVariable("id") Long id, Model model) {
+        MenuItem mi = menuItems.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Menu item not found: " + id));
+        String productKey = products.findById(mi.getProductId())
+                .map(Product::getProductKey).orElse(null);
+        String restaurantKey = productKey == null ? null
+                : products.findByProductKey(productKey)
+                .flatMap(p -> restaurants.findById(p.getRestaurantId()))
+                .map(Restaurant::getRestaurantKey).orElse(null);
+        if (restaurantKey == null) {
+            throw new NoSuchElementException("Could not resolve restaurant for menu item " + id);
+        }
+        model.addAttribute("restaurantKey", restaurantKey);
+        model.addAttribute("productKey", productKey);
+        model.addAttribute("menuItemId", id);
+        model.addAttribute("sourceTypes", PhotoSourceType.values());
+        return "admin/photo-upload";
     }
 
     @GetMapping("/menu-assets")
@@ -714,6 +831,7 @@ public class AdminViewController {
         model.addAttribute("restaurant", r);
         model.addAttribute("nutrition", n);
         model.addAttribute("ingredients", ings);
+        model.addAttribute("photos", views.listPhotos(r == null ? null : r.getRestaurantKey(), key, "ACTIVE"));
         return "admin/product-detail";
     }
 

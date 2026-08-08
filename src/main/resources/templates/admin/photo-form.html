@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/_layout :: head('Edit photo: ' + ${p.photoKey})}"></head>
+<body>
+<header th:replace="~{admin/_layout :: topbar}"></header>
+<nav th:replace="~{admin/_layout :: nav('photos')}"></nav>
+<main>
+    <h2>Edit photo</h2>
+    <p class="muted">
+        Photo key: <code th:text="${p.photoKey}"></code>
+        · restaurant: <code th:text="${restaurantKey}"></code>
+        · status: <span class="pill" th:classappend="'pill-' + ${#strings.toLowerCase(p.status.name())}" th:text="${p.status}"></span>
+    </p>
+
+    <div th:if="${successMessage != null}" class="success">
+        <p th:text="${successMessage}"></p>
+    </div>
+    <div th:if="${errorMessage != null}" class="errors">
+        <p th:text="${errorMessage}"></p>
+    </div>
+
+    <div style="display:flex; gap:1.5rem; align-items:flex-start; flex-wrap:wrap;">
+        <div>
+            <p class="muted" style="margin:0 0 0.25rem;">Current image</p>
+            <a th:href="@{'/api/photos/' + ${p.photoKey} + '/content'}" target="_blank" rel="noopener">
+                <img th:src="@{'/api/photos/' + ${p.photoKey} + '/thumbnail'}"
+                     style="max-width:240px; max-height:240px; border:1px solid var(--border); border-radius:4px;"
+                     alt="Current photo"/>
+            </a>
+            <p class="muted" style="font-size:0.8em; margin:0.25rem 0 0;">
+                <span th:text="${p.width}"></span> × <span th:text="${p.height}"></span>
+                · <span th:text="${p.mimeType}"></span>
+                · source: <code th:text="${p.sourceType}"></code>
+            </p>
+        </div>
+
+        <form th:action="@{'/admin/photos/' + ${p.photoKey}}" method="post" style="flex:1; min-width:320px; max-width:560px;">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+            <table style="max-width:none;">
+                <tr>
+                    <td><label for="productKey">product_key</label></td>
+                    <td>
+                        <input id="productKey" name="productKey" th:value="${currentProductKey}"
+                               placeholder="(leave blank for restaurant-level)" style="width:100%;"/>
+                        <p class="muted" style="font-size:0.8em; margin:0.25rem 0 0;">
+                            Must belong to the same restaurant (<code th:text="${restaurantKey}"></code>).
+                            Blank = unbind from product (move to restaurant-level gallery).
+                        </p>
+                    </td>
+                </tr>
+                <tr>
+                    <td><label for="altText">alt text</label></td>
+                    <td>
+                        <input id="altText" name="altText" th:value="${p.altText}"
+                               style="width:100%;" maxlength="300"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td><label for="isPrimary">primary</label></td>
+                    <td>
+                        <label style="font-weight:normal;">
+                            <input id="isPrimary" type="checkbox" name="isPrimary" value="true"
+                                   th:checked="${p.primaryPhoto}"/>
+                            make this the primary photo in its scope
+                        </label>
+                        <p class="muted" style="font-size:0.8em; margin:0.25rem 0 0;">
+                            Demotes the existing primary photo in the new scope, if any.
+                        </p>
+                    </td>
+                </tr>
+                <tr>
+                    <td><label for="status">status</label></td>
+                    <td>
+                        <select id="status" name="status">
+                            <option th:each="s : ${statuses}" th:value="${s}" th:text="${s}"
+                                    th:selected="${s == p.status}"></option>
+                        </select>
+                    </td>
+                </tr>
+            </table>
+
+            <div class="toolbar" style="margin-top:1rem;">
+                <button type="submit">Save changes</button>
+                <a class="secondary" th:href="@{'/admin/photos/' + ${p.photoKey}}"
+                   th:if="${false}">View</a>
+                <a class="secondary" th:href="@{/admin/photos}">Back to gallery</a>
+            </div>
+        </form>
+    </div>
+</main>
+<th:block th:replace="~{admin/_layout :: scripts}"></th:block>
+</body>
+</html>
