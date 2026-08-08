@@ -9,3 +9,7 @@ data/storage/
 .classpath
 .project
 .settings/
+
+# Node
+node_modules/
+
