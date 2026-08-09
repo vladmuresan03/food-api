@@ -802,7 +802,11 @@ def upload_photos(base: str, payload: dict, user: str, password: str,
                     ("restaurantKey", rk),
                     ("productKey", pk),
                     ("altText", name),
-                    ("isPrimary", "false"),
+                    # Mark the first (and usually only) photo per product as
+                    # primary so the public API's hasPhoto check picks it up.
+                    # The script dedupes by (productKey, -1) so we only ever
+                    # upload one photo per product.
+                    ("isPrimary", "true"),
                     ("sourceType", "GOOGLE_PROTOTYPE"),
                 ]:
                     body += f"--{boundary}\r\n".encode()
