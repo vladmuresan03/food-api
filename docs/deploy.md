@@ -4,6 +4,7 @@
 
 - **App container** — Spring Boot 4.1 / Java 21. Built from `Dockerfile` (multi-stage: `maven:3.9-eclipse-temurin-21` build, `eclipse-temurin:21-jre` runtime, non-root user, JRE-based healthcheck).
 - **PostgreSQL** — version 17, already deployed elsewhere in the cluster. Joins the network `postgresql_foodfinder_net`.
+  - **The food-api database is `foodfinder_spring`, owned by user `foodfinder_spring`.** There is also a separate `foodfinder` database on the same cluster (different project) — do NOT confuse the two. `SPRING_DATASOURCE_URL=jdbc:postgresql://postgres_foodfinder:5432/foodfinder_spring`, user `foodfinder_spring`. pg_hba.conf trusts localhost only; for the food-api container (separate Docker network IP) it requires scram-sha-256, so a valid password for the `foodfinder_spring` user is mandatory.
 - **Reverse proxy** — Nginx Proxy Manager at https://proxy.treloc.com, network `nginx-proxy-manager_default`, configured to terminate TLS for `food.treloc.com` and forward to the app container's port 8080.
 
 ## Image build
